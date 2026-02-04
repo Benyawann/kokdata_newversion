@@ -77,18 +77,18 @@
         </div>
         
         <!-- ตาราง -->
-<div id="water-table" class="tab-content active">
-    <div class="data-table-wrapper">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>สิ่งที่ตรวจ</th>
-                    {% for check_num in water_data.check_numbers %}
-                        <th>ครั้งที่ {{ check_num }}</th>
-                    {% endfor %}
-                    <th>หน่วย</th>
-                </tr>
-            </thead>
+        <div id="water-table" class="tab-content active">
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>สิ่งที่ตรวจ</th>
+                            {% for check_num in water_data.check_numbers %}
+                                <th>ครั้งที่ {{ check_num }}</th>
+                            {% endfor %}
+                        <th>หน่วย</th>
+                    </tr>
+                </thead>
             <tbody>
                 {% for row in water_data.pivot_list %}
                 <tr>
@@ -124,7 +124,7 @@
                         {% endif %}
 
                         <!-- เปลี่ยนสีถ้า "ต่ำกว่าค่ามาตรฐาน" (ตามที่คุณขอ) -->
-                        <td {% if standard_limit is not none and is_valid_number and numeric_val < standard_limit %}class="below-limit"{% endif %}>
+                        <td {% if standard_limit is not none and is_valid_number and numeric_val > standard_limit %}class="exceeds-limit"{% endif %}>
                             {% if val and val not in ['-', 'ND'] %}
                                 {{ val }}
                             {% else %}
@@ -137,6 +137,9 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    <div class="chart-warning-legend">
+        <span class="legend-red">สีแดง</span> หมายถึง เกินค่ามาตรฐาน
     </div>
 </div>
 
