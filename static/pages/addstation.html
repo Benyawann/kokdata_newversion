@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เพิ่มข้อมูลรายการสถานีตรวจสอบ</title>
+    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
+    <link rel="stylesheet" href="/static/css/style2.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-button">ย้อนกลับ</a>
+        <div class="form-header">
+            <h1>เพิ่มข้อมูลรายการสถานีตรวจสอบ</h1>
+            <p>กรุณากรอกข้อมูลให้ครบถ้วน</p>
+        </div>
+
+        <form id="stationForm" class="station-form" method="POST" action="/add-station">
+            <!-- ข้อมูลสถานี -->
+            <div class="form-section">
+                <h2><img src="/static/image/pin.png" alt="location icon" style="width: 30px;">&nbsp; ข้อมูลสถานี</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="station">สถานี <span>*</span></label>
+                        <input type="text" id="station" name="station" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="river">แม่น้ำ <span>*</span></label>
+                        <input type="text" id="river" name="river" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tambon">ตำบล <span>*</span></label>
+                        <input type="text" id="tambon" name="tambon" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="amphoe">อำเภอ <span>*</span></label>
+                        <input type="text" id="amphoe" name="amphoe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="province">จังหวัด <span>*</span></label>
+                        <input type="text" id="province" name="province" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="location">ที่ตั้ง <span>*</span></label>
+                        <textarea id="location" name="location" rows="3" required></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ข้อมูลคุณภาพน้ำ -->
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><img src="/static/image/water.png" alt="location icon" style="width: 30px;">&nbsp; ผลคุณภาพน้ำ</h2>
+                    <button type="button" class="btn-add-row" id="addWaterRowBtn">+ เพิ่มรายการ</button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="water-table" id="waterTable">
+                        <thead><tr></tr></thead>
+                        <tbody id="waterTableBody"></tbody>
+                    </table>
+                </div>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                    💡 คุณสามารถเพิ่ม/ลบรายการได้ตามจำนวนพารามิเตอร์ที่ต้องการ
+                </p>
+            </div>
+
+            <!-- ข้อมูลคุณภาพตะกอนดิน -->
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><img src="/static/image/plant.png" alt="location icon" style="width: 30px;">&nbsp; ผลคุณภาพตะกอนดิน</h2>
+                    <button type="button" class="btn-add-row" id="addSoilRowBtn">+ เพิ่มรายการ</button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="soil-table" id="soilTable">
+                        <thead><tr></tr></thead>
+                        <tbody id="soilTableBody"></tbody>
+                    </table>
+                </div>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                    💡 คุณสามารถเพิ่ม/ลบรายการได้ตามจำนวนพารามิเตอร์ที่ต้องการ
+                </p>
+            </div>
+
+            <!-- ปุ่มส่งฟอร์ม -->
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">บันทึกข้อมูล</button>
+                <button type="reset" class="btn-reset" >ล้างข้อมูล</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    // กำหนดจำนวนครั้ง
+    const WATER_CHECK_COUNT = 14;
+    const SOIL_CHECK_COUNT = 8;
+
+    function createRow(type, checkCount, isFirstRow = false) {
+    const row = document.createElement('tr');
+    const isSoil = (type === 'soil');
+
+    // สิ่งที่ตรวจ / สารที่ตรวจ
+    const paramCell = document.createElement('td');
+    const paramInput = document.createElement('input');
+    paramInput.type = 'text';
+    paramInput.name = isSoil ? 'soil_parameter[]' : 'parameter[]';
+    paramInput.placeholder = isSoil ? 'เช่น ตะกั่ว, แคดเมียม' : 'เช่น ความขุ่น, DO';
+    paramInput.required = true;
+    paramCell.appendChild(paramInput);
+    row.appendChild(paramCell);
+
+    // ช่องครั้งที่ 1 ถึง checkCount
+    for (let i = 1; i <= checkCount; i++) {
+        const cell = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;
+        cell.appendChild(input);
+        row.appendChild(cell);
+    }
+
+    // หน่วย (เฉพาะน้ำเท่านั้น)
+    if (!isSoil) {
+        const unitCell = document.createElement('td');
+        const unitInput = document.createElement('input');
+        unitInput.type = 'text';
+        unitInput.name = 'unit[]';
+        unitInput.placeholder = 'mg/L, NTU';
+        unitInput.required = true;
+        unitCell.appendChild(unitInput);
+        row.appendChild(unitCell);
+    }
+
+    // ไอคอนถังขยะ
+    const actionCell = document.createElement('td');
+    const trashIcon = document.createElement('img');
+    trashIcon.src = '/static/image/delete.png';
+    trashIcon.alt = 'ลบรายการ';
+    trashIcon.className = 'btn-remove-icon';
+    trashIcon.style.width = '20px';
+    trashIcon.style.cursor = 'pointer';
+
+    if (isFirstRow) {
+        trashIcon.style.opacity = '0.4';
+        trashIcon.style.cursor = 'not-allowed';
+    } else {
+        trashIcon.addEventListener('click', () => {
+            const tbodyId = isSoil ? 'soilTableBody' : 'waterTableBody';
+            const tbody = document.getElementById(tbodyId);
+            if (tbody.rows.length > 1) {
+                row.remove();
+            } else {
+                alert(`ต้องมีอย่างน้อย 1 รายการ (${isSoil ? 'ดิน' : 'น้ำ'})`);
+            }
+        });
+    }
+    actionCell.appendChild(trashIcon);
+    row.appendChild(actionCell);
+
+    return row;
+}
+
+    function renderTableHeader(tableId, checkCount, firstColumnText, hasUnit = true) {
+    const thead = document.querySelector(`#${tableId} thead tr`);
+    thead.innerHTML = `<th>${firstColumnText}</th>`;
+    for (let i = 1; i <= checkCount; i++) {
+        const th = document.createElement('th');
+        th.textContent = `ครั้งที่ ${i}`;
+        thead.appendChild(th);
+    }
+    if (hasUnit) {
+        thead.innerHTML += '<th>หน่วย</th>';
+    }
+    thead.innerHTML += '<th></th>'; // สำหรับปุ่มลบ
+}
+
+    // === เริ่มต้น ===
+    document.addEventListener('DOMContentLoaded', () => {
+       // น้ำ (มีหน่วย)
+renderTableHeader('waterTable', WATER_CHECK_COUNT, 'สิ่งที่ตรวจ', true);
+const waterTbody = document.getElementById('waterTableBody');
+waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, true));
+document.getElementById('addWaterRowBtn').addEventListener('click', () => {
+    waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, false));
+});
+
+// ดิน (ไม่มีหน่วย)
+renderTableHeader('soilTable', SOIL_CHECK_COUNT, 'สารที่ตรวจ', false); // ส่ง false
+const soilTbody = document.getElementById('soilTableBody');
+soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, true));
+document.getElementById('addSoilRowBtn').addEventListener('click', () => {
+    soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, false));
+});
+        // ส่งฟอร์ม
+    document.getElementById('stationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(document.getElementById('stationForm'));
+    
+        try {
+            const response = await fetch('/add-station', { // URL ถูกต้อง
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ บันทึกข้อมูลเรียบร้อยแล้ว!');
+                document.getElementById('stationForm').reset();
+                resetTables();
+            } else {
+                alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+        }
+    });
+
+    function resetTables() {
+        // รีเซ็ตตารางน้ำ
+        const waterTbody = document.getElementById('waterTableBody');
+        waterTbody.innerHTML = '';
+        waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, true));
+
+        // รีเซ็ตตารางดิน
+        const soilTbody = document.getElementById('soilTableBody');
+        soilTbody.innerHTML = '';
+        soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, true));
+    }
+    // ปุ่มล้างข้อมูล (รีโหลดหน้า)
+    document.querySelector('.btn-reset').addEventListener('click', function(e) {
+        e.preventDefault(); 
+        location.reload(); // รีโหลดหน้าเว็บใหม่ทั้งหมด
+    });
+    });
+    </script>
+</body>
+</html>
