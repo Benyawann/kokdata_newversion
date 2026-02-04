@@ -1,0 +1,437 @@
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Noto+Sans+Thai:wght@100..900&display=swap');
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Noto Sans Thai", sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #B8D4A5 0%, #CFAF9F 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: left;
+    color: black;
+    margin-bottom: 40px;
+    padding: 30px;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+/* ===== ปุ่มเข้าสู่ระบบ (Login Button) ===== */
+.login-btn {
+    display: inline-block;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #49a061, #2f793e);
+    color: white;
+    font-size: 1.1em;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 30px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+    align-self: flex-start; /* อยู่ซ้ายบนใน container */
+    border: 2px solid transparent;
+}
+
+.login-btn:hover {
+    background: linear-gradient(135deg, #5db875, #3a914d);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    border-color: #ffffff40;
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+.login-btn.top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+/* ===== ปุ่มออกจากระบบ (Logout Button) ===== */
+.logout-btn {
+    display: inline-block;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #bc3531, #bc6a6a);
+    color: white;
+    font-size: 1.1em;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 30px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    align-self: flex-start; /* อยู่ซ้ายบนใน container */
+    border: 2px solid transparent;
+}
+
+.logout-btn:hover {
+    background: linear-gradient(135deg, #be534f, #b58d8d);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    border-color: #ffffff40;
+}
+
+.logout-btn:active {
+    transform: translateY(0);
+}
+
+.logout-btn.top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+/* ===== User Info แบบลอยมุมขวา ===== */
+.user-info.top-right {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 8px 16px;
+    border-radius: 30px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    font-weight: 600;
+    color: #2f793e;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+}
+
+.user-info.top-right .logout-btn {
+    background: linear-gradient(135deg, #e57373, #d32f2f);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.user-info.top-right .logout-btn:hover {
+    background: linear-gradient(135deg, #ef9a9a, #f44336);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ปุ่มเข้าสู่ระบบ (เมื่อไม่ได้ล็อกอิน) */
+.login-btn.top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #49a061, #2f793e);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    transition: all 0.25s ease;
+}
+
+.login-btn.top-right:hover {
+    background: linear-gradient(135deg, #5db875, #3a914d);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
+}
+
+.stats {
+    display: flex;
+    gap: 20px;
+    justify-content: center; 
+    flex-wrap: wrap;
+    margin: 20px auto 40px auto; 
+    max-width: 1200px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-align: center;
+    min-width: 180px;
+}
+
+.stat-card .number {
+    font-size: 2em;
+    font-weight: bold;
+    color: black;
+}
+
+.stat-card .label {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
+
+.left-panel {
+    display : flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.search-and-stats {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    background: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 15px;
+    flex: 1;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    min-width: 300px;
+}
+
+.search-box input {
+    border-radius: 30px ;
+    width: auto;
+    min-width: 150px; 
+    padding: 10px 20px;
+    font-size: 1em;
+    border: 2px solid #e0e0e0;
+}
+
+.search-box select {
+    width: auto;
+    min-width: 150px; 
+    padding: 10px 20px;
+    font-size: 1em;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.3s;
+}   
+
+.search-box input:focus {
+    border-color: #767c5b;
+}
+
+.filters {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}   
+
+.station select {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}  
+
+.station-card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.filters select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+
+.filters select:focus {
+    border-color: #77BF98;
+}
+
+.stations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+}
+
+.station-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+
+.station-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.station-code {
+    background: #72C4C1;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+    font-family: 'Anuphan', sans-serif;
+}
+
+.river-name {
+    color: black;
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.station-info {
+    margin-top: 15px;
+}
+
+.info-row {
+    display: flex;
+    margin-bottom: 10px;
+    align-items: flex-start;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #666;
+    min-width: 80px;
+    margin-right: 10px;
+}
+
+.info-value {
+    color: #333;
+    flex: 1;
+}
+
+.location {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #555;
+    line-height: 1.6;
+}
+
+.no-results {
+    text-align: center;
+    padding: 20px;
+    color: white;
+    font-size: 1.2em;
+    width: 100%;
+}
+
+.floating-button {
+    position: fixed;
+    bottom: 24px;      
+    right: 24px;       
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #49a061;
+    color: white;
+    border: none;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    z-index: 1000; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.floating-button:hover {
+    background: #6ea574;
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .stations-grid {
+        grid-template-columns: 1fr;
+}
+
+    .header h1 {
+        font-size: 2em;
+    }
+
+    .stats {
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .stat-card {
+        width: 100%;
+    }
+
+    .search-and-stats {
+        flex-direction: column;
+    }
+
+    .login-btn {
+        padding: 10px 24px;
+        font-size: 1em;
+        margin-bottom: 15px;
+    }
+
+    .login-btn.top-right {
+        top: 15px;
+        right: 15px;
+        padding: 8px 20px;
+        font-size: 0.95em;
+    }
+
+    .user-info.top-right,
+    .login-btn.top-right {
+        top: 15px;
+        right: 15px;
+        padding: 6px 12px;
+        font-size: 0.9em;
+    }
+    
+    .user-info.top-right .logout-btn {
+        padding: 4px 12px;
+        font-size: 0.9em;
+    }
+}
