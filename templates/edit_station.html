@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไขสถานี {{ station.station }}</title>
+    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
+    <link rel="stylesheet" href="/static/css/style2.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/station/{{ station.station }}" class="back-button">ย้อนกลับ</a>
+        <div class="form-header">
+            <h1>แก้ไขสถานี {{ station.station }}</h1>
+            <p>กรุณาแก้ไขข้อมูลให้ครบถ้วน</p>
+        </div>
+
+        <form id="stationForm" class="station-form" method="POST">
+            <!-- ข้อมูลสถานี -->
+            <div class="form-section">
+                <h2><img src="/static/image/pin.png" style="width: 30px;">&nbsp; ข้อมูลสถานี</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>สถานี <span>*</span></label>
+                        <input type="text" name="station" value="{{ station.station }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>แม่น้ำ <span>*</span></label>
+                        <input type="text" name="river" value="{{ station.river }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ตำบล <span>*</span></label>
+                        <input type="text" name="tambon" value="{{ station.tambon }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>อำเภอ <span>*</span></label>
+                        <input type="text" name="amphoe" value="{{ station.amphoe }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>จังหวัด <span>*</span></label>
+                        <input type="text" name="province" value="{{ station.province }}" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>ที่ตั้ง <span>*</span></label>
+                        <textarea name="location" rows="3" required>{{ station.location }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ข้อมูลคุณภาพน้ำ -->
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><img src="/static/image/water.png" style="width: 30px;">&nbsp; ผลคุณภาพน้ำ</h2>
+                    <button type="button" class="btn-add-row" id="addWaterRowBtn">+ เพิ่มรายการ</button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="water-table" id="waterTable">
+                        <thead><tr></tr></thead>
+                        <tbody id="waterTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ข้อมูลคุณภาพตะกอนดิน -->
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2><img src="/static/image/plant.png" style="width: 30px;">&nbsp; ผลคุณภาพตะกอนดิน</h2>
+                    <button type="button" class="btn-add-row" id="addSoilRowBtn">+ เพิ่มรายการ</button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="soil-table" id="soilTable">
+                        <thead><tr></tr></thead>
+                        <tbody id="soilTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">บันทึกการแก้ไข</button>
+                <a href="/station/{{ station.station }}" class="btn-reset">ยกเลิก</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+         // กำหนดจำนวนครั้ง
+ const WATER_CHECK_COUNT = 14;
+        const SOIL_CHECK_COUNT = 8;
+
+        // === สร้างแถว ===
+        function createRow(type, checkCount, data = null) {
+            const row = document.createElement('tr');
+            const isSoil = (type === 'soil');
+
+            // สิ่งที่ตรวจ / สารที่ตรวจ
+            const paramCell = document.createElement('td');
+            const paramInput = document.createElement('input');
+            paramInput.type = 'text';
+            paramInput.name = isSoil ? 'soil_parameter[]' : 'parameter[]';
+            paramInput.placeholder = isSoil ? 'เช่น ตะกั่ว, แคดเมียม' : 'เช่น ความขุ่น, DO';
+            paramInput.required = true;
+            if (data && data.parameter) paramInput.value = data.parameter;
+            paramCell.appendChild(paramInput);
+            row.appendChild(paramCell);
+
+            // ช่องครั้งที่ 1 ถึง checkCount
+            for (let i = 1; i <= checkCount; i++) {
+                const cell = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;
+                if (data && data.checks && data.checks[i]) {
+                    input.value = data.checks[i];
+                }
+                cell.appendChild(input);
+                row.appendChild(cell);
+            }
+
+            // หน่วย (เฉพาะน้ำ)
+            if (!isSoil) {
+                const unitCell = document.createElement('td');
+                const unitInput = document.createElement('input');
+                unitInput.type = 'text';
+                unitInput.name = 'unit[]';
+                unitInput.placeholder = 'mg/L, NTU';
+                unitInput.required = true;
+                if (data && data.unit) unitInput.value = data.unit;
+                unitCell.appendChild(unitInput);
+                row.appendChild(unitCell);
+            }
+
+            // ไอคอนถังขยะ
+            const actionCell = document.createElement('td');
+            const trashIcon = document.createElement('img');
+            trashIcon.src = '/static/image/delete.png';
+            trashIcon.alt = 'ลบรายการ';
+            trashIcon.className = 'btn-remove-icon';
+            trashIcon.style.width = '20px';
+            trashIcon.style.cursor = 'pointer';
+            trashIcon.addEventListener('click', () => {
+                row.remove();
+            });
+            actionCell.appendChild(trashIcon);
+            row.appendChild(actionCell);
+
+            return row;
+        }
+
+        // === สร้างหัวตาราง ===
+        function renderTableHeader(tableId, checkCount, firstColumnText, hasUnit = true) {
+            const thead = document.querySelector(`#${tableId} thead tr`);
+            thead.innerHTML = `<th>${firstColumnText}</th>`;
+            for (let i = 1; i <= checkCount; i++) {
+                const th = document.createElement('th');
+                th.textContent = `ครั้งที่ ${i}`;
+                thead.appendChild(th);
+            }
+            if (hasUnit) thead.innerHTML += '<th>หน่วย</th>';
+            thead.innerHTML += '<th></th>';
+        }
+
+        // === เริ่มต้น ===
+        document.addEventListener('DOMContentLoaded', () => {
+            // น้ำ
+            renderTableHeader('waterTable', WATER_CHECK_COUNT, 'สิ่งที่ตรวจ', true);
+            const waterTbody = document.getElementById('waterTableBody');
+            // โหลดข้อมูลเดิม
+            {% for param, data in water_data.items() %}
+                waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, {
+                    parameter: "{{ param }}",
+                    unit: "{{ data.unit }}",
+                    checks: {{ data.checks|tojson }}
+                }));
+            {% endfor %}
+            // ถ้าไม่มีข้อมูล ให้เพิ่มแถวว่าง
+            if (waterTbody.children.length === 0) {
+                waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT));
+            }
+            document.getElementById('addWaterRowBtn').addEventListener('click', () => {
+                waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT));
+            });
+
+            // ดิน
+            renderTableHeader('soilTable', SOIL_CHECK_COUNT, 'สารที่ตรวจ', false);
+            const soilTbody = document.getElementById('soilTableBody');
+            {% for param, data in soil_data.items() %}
+                soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, {
+                    parameter: "{{ param }}",
+                    checks: {{ data.checks|tojson }}
+                }));
+            {% endfor %}
+            if (soilTbody.children.length === 0) {
+                soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT));
+            }
+            document.getElementById('addSoilRowBtn').addEventListener('click', () => {
+                soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT));
+            });
+
+            // ส่งฟอร์ม
+            document.getElementById('stationForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(document.getElementById('stationForm'));
+                try {
+                    const response = await fetch(`/edit-station/{{ station.station }}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('✅ บันทึกการแก้ไขเรียบร้อยแล้ว!');
+                        window.location.href = `/station/{{ station.station }}`;
+                    } else {
+                        alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
