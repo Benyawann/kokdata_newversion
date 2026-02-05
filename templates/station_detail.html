@@ -283,6 +283,7 @@
                             <canvas id="soilChart"></canvas>
                         </div>
                         <div class="chart-warning-legend">
+                            <span class="legend-blue">สีน้ำเงิน</span> หมายถึง มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน<br>
                             <span class="legend-red">สีแดง</span> หมายถึง มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน
                         </div>
                         <div class="chart-warning">
@@ -526,181 +527,309 @@ function deleteStation(stationCode) {
              }]
             },
             options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            display: true,
-            position: 'top'
-        },
-        title: {
-            display: true,
-            text: `กราฟแสดงค่าของ ${parameter}`,
-            font: { size: 16 }
-        },
-        // เพิ่ม annotation สำหรับสารในตะกอนดิน — แสดงเฉพาะ "ไม่ปลอดภัย" (สีแดง)
-        annotation: {
-            annotations: (() => {
-                if (parameter === 'สารหนู') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 33,
-                            yMax: 33,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 33',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                title: {
+                        display: true,
+                        text: `กราฟแสดงค่าของ ${parameter}`,
+                        font: { size: 16 }
+                },
+                // เพิ่ม annotation สำหรับสารในตะกอนดิน
+                annotation: {
+                    annotations: (() => {
+                        if (parameter === 'สารหนู') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 10,
+                                    yMax: 10,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 10',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 33,
+                                    yMax: 33,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 33',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'แคดเมียม') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 5,
-                            yMax: 5,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 5',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'แคดเมียม') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 1,
+                                    yMax: 1,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 1',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 5,
+                                    yMax: 5,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 5',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'นิกเกิล') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 50,
-                            yMax: 50,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 50',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'นิกเกิล') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 23,
+                                    yMax: 23,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 23',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 50,
+                                    yMax: 50,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 50',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'ตะกั่ว') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 130,
-                            yMax: 130,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 130',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'ตะกั่ว') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 36,
+                                    yMax: 36,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 36',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 130,
+                                    yMax: 130,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 130',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'สังกะสี') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 460,
-                            yMax: 460,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 460',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'สังกะสี') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 120,
+                                    yMax: 120,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 120',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 460,
+                                    yMax: 460,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 460',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'ทองแดง') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 150,
-                            yMax: 150,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 150',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'ทองแดง') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 31.5,
+                                    yMax: 31.5,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 31.5',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                        type: 'line',
+                                        yMin: 150,
+                                        yMax: 150,
+                                        borderColor: 'red',
+                                        borderWidth: 2,
+                                        borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 150',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'ปรอท') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 1.0,
-                            yMax: 1.0,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 1.0',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'ปรอท') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 0.2,
+                                    yMax: 0.2,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 0.2',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 1.0,
+                                    yMax: 1.0,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 1.0',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
-                else if (parameter === 'โครเมียม') {
-                    return {
-                        unsafeLine: {
-                            type: 'line',
-                            yMin: 110,
-                            yMax: 110,
-                            borderColor: 'red',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {
-                                display: true,
-                                content: 'ไม่ปลอดภัย: ≥ 110',
-                                position: 'end',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                font: { size: 12 }
-                            }
+                        else if (parameter === 'โครเมียม') {
+                            return {
+                                safeLine: {
+                                    type: 'line',
+                                    yMin: 43.4,
+                                    yMax: 43.4,
+                                    borderColor: 'blue',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 43.4',
+                                        position: 'start',
+                                        backgroundColor: 'blue',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                },
+                                unsafeLine: {
+                                    type: 'line',
+                                    yMin: 110,
+                                    yMax: 110,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 110',
+                                        position: 'end',
+                                        backgroundColor: 'red',
+                                        color: 'white',
+                                        font: { size: 12 }
+                                    }
+                                }
+                            };
                         }
-                    };
-                }
                 return {};
             })()
         }
@@ -721,8 +850,9 @@ function deleteStation(stationCode) {
         }
     }
 }
-    });
+    }); 
 }
+
     // Tab switching logic
     function setupTabSwitching() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
