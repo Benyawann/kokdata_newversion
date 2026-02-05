@@ -231,6 +231,11 @@ body {
     font-size: 14px;
 }
 
+.legend-blue {
+    color: blue;
+    font-weight: bold;
+}
+
 .legend-red {
     color: red;
     font-weight: bold;

@@ -188,6 +188,21 @@ body {
     background: rgb(147, 197, 160);
 }
 
+.btn-add-col {
+    background: #2556c0;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-add-col:hover {
+    background: rgb(129, 189, 208);
+}
+
 .btn-remove-icon {
     transition: opacity 0.2s, transform 0.2s;
 }
@@ -248,5 +263,10 @@ body {
 
     .form-actions {
         flex-direction: column;
+    }
+
+    .btn-add-col {
+        padding: 6px 12px;
+        font-size: 0.9em;
     }
 }
