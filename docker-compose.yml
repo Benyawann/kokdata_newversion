@@ -2,6 +2,8 @@ services:
   web:
     build: .
     container_name: kok-station-app
+    ports:
+      - "8080:8080"
     volumes:
       # Mount database to persist data
       - ./kok_data.db:/app/kok_data.db
