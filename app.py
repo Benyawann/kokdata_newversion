@@ -588,10 +588,25 @@ def edit_station(station_code):
             soil_data[param]['checks'][check_num] = row['value']
             pass
 
+        # คำนวณจำนวนครั้งสูงสุด
+        water_check_count = 0
+        if water_data:
+            first_param = next(iter(water_data.values()))
+            water_check_count = len(first_param['checks'])
+
+        soil_check_count = 0
+        if soil_data:
+            first_param = next(iter(soil_data.values()))
+            soil_check_count = len(first_param['checks'])
+
+        conn.close()  # ปิด connection ครั้งเดียวที่นี่
+
         return render_template('edit_station.html',
                              station=station_data,
                              water_data=water_data,
-                             soil_data=soil_data)
+                             soil_data=soil_data,
+                             water_check_count=water_check_count or 14,
+                             soil_check_count=soil_check_count or 8)
                              
 
     except Exception as e:
