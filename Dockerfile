@@ -25,5 +25,5 @@ EXPOSE 8080
 # CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "app:app"]
 
 # Or use Flask development server (for testing)
-CMD ["python3", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
 
