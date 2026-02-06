@@ -3,7 +3,7 @@ services:
     build: .
     container_name: kok-station-app
     ports:
-      - "10000:10000"
+      - "8080:8080"
     volumes:
       # Mount database to persist data
       - ./kok_data.db:/app/kok_data.db
@@ -14,7 +14,7 @@ services:
       - FLASK_DEBUG=0
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/').read()"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()"]
       interval: 30s
       timeout: 10s
       retries: 3

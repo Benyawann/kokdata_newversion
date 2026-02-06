@@ -615,7 +615,7 @@ def edit_station(station_code):
     
 if __name__ == '__main__':
     # Get port from environment variable or use default
-    port = int(os.environ.get('PORT', 10000))
+    port = int(os.environ.get('PORT', 8080))
     print("=" * 50)
     print("🚀 กำลังเริ่มเว็บแอปพลิเคชัน...")
     print("=" * 50)
