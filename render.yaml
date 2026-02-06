@@ -6,7 +6,4 @@ services:
       - key: PYTHON_VERSION
         value: "3.10.12"
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python app.py"
-    envVars:
-      - key: PORT
-        value: "10000"
+    startCommand: "gunicorn app:app"
