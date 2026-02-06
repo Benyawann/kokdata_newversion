@@ -498,8 +498,9 @@ def edit_station(station_code):
             units = request.form.getlist('unit[]')
             soil_params = request.form.getlist('soil_parameter[]') 
 
-            # 4. บันทึกน้ำ (14 ครั้ง)
-            for i in range(1, 15):
+            # 4. บันทึกข้อมูลน้ำ — ตรวจสอบจำนวนคอลัมน์จริง
+            water_check_count = int(request.form.get('water_check_count', 14))
+            for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
                 for idx, param in enumerate(parameters):
                     if idx < len(check_values):
@@ -511,13 +512,14 @@ def edit_station(station_code):
                                 numeric_value = 0.0 if value.startswith('<') else float(value)
                             except ValueError:
                                 pass
-                        cur.execute('''
-                            INSERT INTO water_data ("สถานี", "\ufeffสิ่งที่ตรวจ", "หน่วย", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
-                            VALUES (?, ?, ?, ?, ?, ?)
+                    cur.execute('''
+                        INSERT INTO water_data ("สถานี", "\ufeffสิ่งที่ตรวจ", "หน่วย", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
+                        VALUES (?, ?, ?, ?, ?, ?)
                         ''', (station, param, unit, f'ครั้งที่ {i}', value, numeric_value))
 
-            # 5. บันทึกดิน (8 ครั้ง)
-            for i in range(1, 9):
+            # 5. บันทึกข้อมูลดิน — ตรวจสอบจำนวนคอลัมน์จริง
+            soil_check_count = int(request.form.get('soil_check_count', 8))
+            for i in range(1, soil_check_count + 1):
                 soil_check_values = request.form.getlist(f'soil_check{i}[]')
                 for idx, param in enumerate(soil_params):
                     if idx < len(soil_check_values):
@@ -531,8 +533,7 @@ def edit_station(station_code):
                         cur.execute('''
                             INSERT INTO soil_data ("สถานี", "สารที่ตรวจ", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
                             VALUES (?, ?, ?, ?, ?)
-                        ''', (station, param, f'ครั้งที่ {i}', value, numeric_value))
-
+                            ''', (station, param, f'ครั้งที่ {i}', value, numeric_value))
             conn.commit()
             conn.close()
             return jsonify({'success': True})
