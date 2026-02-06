@@ -625,6 +625,8 @@ if __name__ == '__main__':
     print("=" * 50)
     print("กด Ctrl+C เพื่อหยุดการทำงาน")
     print("=" * 50)
+
+    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
     try:
         # Use threaded=True to handle multiple requests
         # Use 0.0.0.0 to allow connections from all interfaces

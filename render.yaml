@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kokdata-app
+    runtime: python
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.12"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: PORT
+        value: "10000"
