@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code (รวม .env)
 COPY . .
 
 # Create directory for database if needed
@@ -21,9 +21,4 @@ RUN mkdir -p /app/data
 EXPOSE 8080
 
 # Run the application
-# Use gunicorn for production (recommended)
-# CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "app:app"]
-
-# Or use Flask development server (for testing)
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
-
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
