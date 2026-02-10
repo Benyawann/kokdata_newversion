@@ -3,314 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>รายละเอียดสถานี {{ station.station }}</title>
+    <title>รายละเอียดสถานี {{ station.station }}</title>
     <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
-    <link rel="stylesheet" href="/static/css/style1.css">  
+    <link rel="stylesheet" href="/static/css/style1.css">
 </head>
 <body>
     <div class="container">
-    <!-- ย้ายปุ่มย้อนกลับและปุ่มลบมาอยู่ใน header เดียวกัน -->
-    <div class="header-actions">
-        <a href="/" class="back-button">ย้อนกลับ</a>
-        {% if session.logged_in %}
-        <div class="station-actions">
-             <a href="/edit-station/{{ station.station }}" class="edit-button">
-                    <img src="/static/image/edit.png" alt="location icon" style="width: 20px;">&nbsp; แก้ไข</a>
-                    <button onclick="deleteStation('{{ station.station }}')" class="delete-button">
-                    <img src="/static/image/delete2.png" alt="location icon" style="width: 20px;">&nbsp; ลบสถานีนี้
-            </button>
+        <!-- ย้ายปุ่มย้อนกลับและปุ่มลบมาอยู่ใน header เดียวกัน -->
+        <div class="header-actions">
+            <a href="/" class="back-button">ย้อนกลับ</a>
+            {% if session.logged_in %}
+            <div class="station-actions">
+                <a href="/edit-station/{{ station.station }}" class="edit-button">
+                <img src="/static/image/edit.png" alt="location icon" style="width: 20px;">&nbsp; แก้ไข</a>
+                <button onclick="deleteStation('{{ station.station }}')" class="delete-button">
+                <img src="/static/image/delete2.png" alt="location icon" style="width: 20px;">&nbsp; ลบสถานีนี้
+                </button>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
-    </div>
-
     <div class="header">
         <h1>รายละเอียดสถานี</h1>
-            <div class="station-code">{{ station.station }}</div>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
-                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกินค่ามาตรฐาน ข้อมูล ณ วันที่ 6 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
+    <div class="station-code">{{ station.station }}</div>
+        <div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
+            <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกินค่ามาตรฐาน ข้อมูล ณ วันที่ 6 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
+        </div>
+    <!-- รายละเอียดสถานี -->
+    <div class="info-grid">
+    <!-- แม่น้ำ -->
+        <div class="info-item">
+            <div class="info-label">
+                <img src="/static/image/river (1).png" alt="location icon" style="width: 20px;">
+                &nbsp; แม่น้ำ</div>
+                <div class="info-value">{{ station.river }}</div>
             </div>
-
-            <!-- รายละเอียดสถานี -->
-            <div class="info-grid">
-                <!-- แม่น้ำ -->
-                <div class="info-item">
-                    <div class="info-label">
-                        <img src="/static/image/river (1).png" alt="location icon" style="width: 20px;">
-                        &nbsp; แม่น้ำ</div>
-                    <div class="info-value">{{ station.river }}</div>
-                </div>
-                <!-- ตำบล -->
-                <div class="info-item">
-                    <div class="info-label"> 
-                        <img src="/static/image/pin.png" alt="location icon" style="width: 20px;">&nbsp; ตำบล</div>
-                    <div class="info-value">{{ station.tambon }}</div>
-                </div>
-                <!-- อำเภอ -->
-                <div class="info-item">
-                    <div class="info-label">
-                        <img src="/static/image/bank.png" alt="location icon" style="width: 20px; ">&nbsp; อำเภอ</div>
-                    <div class="info-value">{{ station.amphoe }}</div>
-                </div>
-                <!-- จังหวัด -->
-                <div class="info-item">
-                    <div class="info-label">
-                        <img src="/static/image/book.png" alt="location icon" style="width: 20px; ">&nbsp; จังหวัด</div>
-                    <div class="info-value">{{ station.province }}</div>
-                </div>
+        <!-- ตำบล -->
+        <div class="info-item">
+            <div class="info-label">
+                <img src="/static/image/pin.png" alt="location icon" style="width: 20px;">&nbsp; ตำบล</div>
+                <div class="info-value">{{ station.tambon }}</div>
             </div>
-            <!-- ที่ตั้ง -->
-            <div class="location-box">
-                <img src="/static/image/placeholder.png" alt="location icon" style="width: 20px;">
-                <strong>&nbsp; ที่ตั้ง:</strong> {{ station.location }}
-            </div>
+        <!-- อำเภอ -->
+        <div class="info-item">
+            <div class="info-label">
+                <img src="/static/image/bank.png" alt="location icon" style="width: 20px; ">&nbsp; อำเภอ</div>
+            <div class="info-value">{{ station.amphoe }}</div>
+        </div>
+        <!-- จังหวัด -->
+        <div class="info-item">
+            <div class="info-label">
+                <img src="/static/image/book.png" alt="location icon" style="width: 20px; ">&nbsp; จังหวัด</div>
+            <div class="info-value">{{ station.province }}</div>
         </div>
     </div>
+    <!-- ที่ตั้ง -->
+    <div class="location-box">
+        <img src="/static/image/placeholder.png" alt="location icon" style="width: 20px;">
+            <strong>&nbsp; ที่ตั้ง:</strong> {{ station.location }}
+        </div>
+    </div>
+</div>
+
     <!-- ส่วนผลคุณภาพน้ำ -->
     <div class="data-section">
         <h2><img src="/static/image/water.png" alt="location icon" style="width: 30px;">&nbsp; ผลคุณภาพน้ำในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง</h2>
-        {% if water_data and water_data.pivot %}
+        {% if water_data and water_data.pivot_list_filtered %}
         <!-- Tab Navigation -->
         <div class="tab-nav">
             <button class="tab-btn active" data-target="water-table">ตาราง</button>
             <button class="tab-btn" data-target="water-chart">กราฟ</button>
         </div>
-        
         <!-- ตาราง -->
         <div id="water-table" class="tab-content active">
             <div class="data-table-wrapper">
                 <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>สิ่งที่ตรวจ</th>
-                            {% for check_num in water_data.check_numbers %}
-                                <th>ครั้งที่ {{ check_num }}</th>
-                            {% endfor %}
-                        <th>หน่วย</th>
-                    </tr>
-                </thead>
-            <tbody>
-                {% for row in water_data.pivot_list %}
+                <thead>
                 <tr>
+                    <th>สิ่งที่ตรวจ</th>
+                        {% for check_num in water_data.check_numbers %}
+                            <th>ครั้งที่ {{ check_num }}</th>
+                                {% endfor %}
+                                    <th>หน่วย</th>
+                                    </tr>
+                                </thead>
+                            <tbody>
+                            {% for row in water_data.pivot_list_filtered %}
+                        <tr>
                     <td style="font-weight: 600; background: #f8f9fa;">{{ row.parameter }}</td>
                     {% for check_num in water_data.check_numbers %}
                         {% set check_str = check_num|string %}
                         {% set val = row.check_values.get(check_str, '') %}
                         {% set numeric_val = 0 %}
                         {% set is_valid_number = false %}
-                        {% if val and val not in ['-', 'ND'] %}
-                            {% set numeric_val = val|float %}
-                            {% set is_valid_number = true %}
-                        {% endif %}
-
-                        <!-- กำหนดค่ามาตรฐานสำหรับน้ำ -->
+                    {% if val and val not in ['-', 'ND'] %}
+                        {% set numeric_val = val|float %}
+                        {% set is_valid_number = true %}
+                    {% endif %}
+                    <!-- กำหนดค่ามาตรฐานสำหรับน้ำ -->
                         {% set standard_limit = none %}
-                        {% if row.parameter == 'สารหนู' %}
-                            {% set standard_limit = 0.01 %}
-                        {% elif row.parameter == 'แมงกานีส' %}
-                            {% set standard_limit = 1.0 %}
-                        {% elif row.parameter == 'ตะกั่ว' %}
-                            {% set standard_limit = 0.05 %}
-                        {% elif row.parameter == 'ปรอท' %}
-                            {% set standard_limit = 0.002 %}
-                        {% elif row.parameter == 'ทองแดง' %}
-                            {% set standard_limit = 0.1 %}
-                        {% elif row.parameter == 'สังกะสี' %}
-                            {% set standard_limit = 1.0 %}
-                        {% elif row.parameter == 'นิกเกิล' %}
-                            {% set standard_limit = 0.1 %}
-                        {% elif row.parameter == 'แคดเมียม' %}
-                            {% set standard_limit = 0.005 %}
-                        {% endif %}
-
-                        <!-- เปลี่ยนสีถ้า "ต่ำกว่าค่ามาตรฐาน" (ตามที่คุณขอ) -->
-                        <td {% if standard_limit is not none and is_valid_number and numeric_val > standard_limit %}class="exceeds-limit"{% endif %}>
-                            {% if val and val not in ['-', 'ND'] %}
-                                {{ val }}
-                            {% else %}
-                                <span style="color: #ccc;">-</span>
-                            {% endif %}
-                        </td>
-                    {% endfor %}
-                    <td style="background: #f8f9fa; font-weight: 600;">{{ row.unit }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="chart-warning-legend">
-        <span class="legend-red">สีแดง</span> หมายถึง เกินค่ามาตรฐาน
-    </div>
+                    {% if row.parameter == 'สารหนู' %}
+                        {% set standard_limit = 0.01 %}
+                    {% elif row.parameter == 'แมงกานีส' %}
+                        {% set standard_limit = 1.0 %}
+                    {% elif row.parameter == 'ตะกั่ว' %}
+                        {% set standard_limit = 0.05 %}
+                    {% elif row.parameter == 'ปรอท' %}
+                        {% set standard_limit = 0.002 %}
+                    {% elif row.parameter == 'ทองแดง' %}
+                        {% set standard_limit = 0.1 %}
+                    {% elif row.parameter == 'สังกะสี' %}
+                        {% set standard_limit = 1.0 %}
+                    {% elif row.parameter == 'นิกเกิล' %}
+                        {% set standard_limit = 0.1 %}
+                    {% elif row.parameter == 'แคดเมียม' %}
+                        {% set standard_limit = 0.005 %}
+                    {% endif %}
+                <!-- เปลี่ยนสีถ้า "เกินค่ามาตรฐาน" -->
+                <td {% if standard_limit is not none and is_valid_number and numeric_val > standard_limit %}class="exceeds-limit"{% endif %}>
+                    {% if val and val not in ['-', 'ND'] %}
+                        {{ val }}
+                    {% else %}
+                        <span style="color: #ccc;">-</span>
+                    {% endif %}
+                </td>
+        {% endfor %}
+        <td style="background: #f8f9fa; font-weight: 600;">{{ row.unit }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 </div>
-
-        <!-- กราฟ -->
-        <div id="water-chart" class="tab-content">
-            <div class="chart-container">
-                <div class="parameter-selector">
-                    <select id="water-parameter-select">
-                        <option value="">เลือกสิ่งที่ตรวจ</option>
-                        {% for row in water_data.pivot_list %}
-                            <option value="{{ row.parameter }}">{{ row.parameter }} ({{ row.unit }})</option>
-                        {% endfor %}
-                    </select>
-                    <button class="chart-toggle" id="water-chart-toggle">แสดงกราฟ</button>
+<div class="chart-warning-legend">
+    <span class="legend-red">สีแดง</span> หมายถึง เกินค่ามาตรฐาน
+</div>
+</div>
+    <!-- กราฟ -->
+    <div id="water-chart" class="tab-content">
+        <div class="chart-container">
+            <div class="parameter-selector">
+                <select id="water-parameter-select">
+                    <option value="">เลือกสิ่งที่ตรวจ</option>
+                    {% for row in water_data.pivot_list_filtered %}
+                    <option value="{{ row.parameter }}">{{ row.parameter }} ({{ row.unit }})</option>
+                    {% endfor %}
+                </select>
+                <button class="chart-toggle" id="water-chart-toggle">แสดงกราฟ</button>
+            </div>
+            <div id="water-chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="waterChart"></canvas>
                 </div>
-                <div id="water-chart-container">
-                    <div class="chart-wrapper">
-                        <canvas id="waterChart"></canvas>
-                    </div>
-                    <div class="chart-warning">
-                        <img src="/static/image/warning.png" alt="location icon" style="width: 20px;">
-                        กรณีที่กราฟแสดงเป็น 0 เนื่องจากค่าน้อยกว่าที่ห้องปฏิบัติการสามารถอ่านผลได้ ให้ดูจากผลในตารางเป็นหลัก
-                    </div>
+                <div class="chart-warning">
+                    <img src="/static/image/warning.png" alt="location icon" style="width: 20px;">
+                    กรณีที่กราฟแสดงเป็น 0 เนื่องจากค่าน้อยกว่าที่ห้องปฏิบัติการสามารถอ่านผลได้ ให้ดูจากผลในตารางเป็นหลัก
                 </div>
             </div>
         </div>
-
-        <div class="period-note">
-            <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างน้ำในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคมถึงเดือนธันวาคม 2568 ดังนี้<br>
-                ▪ <strong>ครั้งที่ 1</strong> เมื่อวันที่ 19 - 24 มีนาคม 2568 และวันที่ 9 เมษายน 2568<br>
-                ▪ <strong>ครั้งที่ 2</strong> เมื่อวันที่ 21 - 24 เมษายน 2568 และวันที่ 29 เมษายน - 2 พฤษภาคม 2568<br>
-                ▪ <strong>ครั้งที่ 3</strong> เมื่อวันที่ 12 - 16 พฤษภาคม 2568<br>
-                ▪ <strong>ครั้งที่ 4</strong> เมื่อวันที่ 26 - 30 พฤษภาคม 2568<br>
-                ▪ <strong>ครั้งที่ 5</strong> เมื่อวันที่ 9 - 13 มิถุนายน 2568<br>
-                ▪ <strong>ครั้งที่ 6</strong> เมื่อวันที่ 23 - 27 มิถุนายน 2568<br>
-                ▪ <strong>ครั้งที่ 7</strong> เมื่อวันที่ 30 มิถุนายน - 4 กรกฎาคม 2568<br>
-                ▪ <strong>ครั้งที่ 8</strong> เมื่อวันที่ 21 - 25 กรกฎาคม 2568<br>
-                ▪ <strong>ครั้งที่ 9</strong> เมื่อวันที่ 4 - 8 สิงหาคม 2568<br>
-                ▪ <strong>ครั้งที่ 10</strong> เมื่อวันที่ 18 – 22 สิงหาคม 2568<br>
-                ▪ <strong>ครั้งที่ 11</strong> เมื่อวันที่ 1 – 5 กันยายน 2568<br>
-                ▪ <strong>ครั้งที่ 12</strong> เมื่อวันที่ 22 – 26 กันยายน 2568<br>
-                ▪ <strong>ครั้งที่ 13</strong> เมื่อวันที่ 4 – 27 พฤศจิกายน 2568<br>
-                ▪ <strong>ครั้งที่ 14</strong> เมื่อวันที่ 22 – 26 ธันวาคม 2568
-
-        </div>
-        {% else %}
-            <div class="no-data">ไม่มีข้อมูลคุณภาพน้ำ</div>
-        {% endif %}
     </div>
+    <div class="period-note">
+        <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างน้ำในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคมถึงเดือนธันวาคม 2568 ดังนี้<br>
+        ▪ <strong>ครั้งที่ 1</strong> เมื่อวันที่ 19 - 24 มีนาคม 2568 และวันที่ 9 เมษายน 2568<br>
+        ▪ <strong>ครั้งที่ 2</strong> เมื่อวันที่ 21 - 24 เมษายน 2568 และวันที่ 29 เมษายน - 2 พฤษภาคม 2568<br>
+        ▪ <strong>ครั้งที่ 3</strong> เมื่อวันที่ 12 - 16 พฤษภาคม 2568<br>
+        ▪ <strong>ครั้งที่ 4</strong> เมื่อวันที่ 26 - 30 พฤษภาคม 2568<br>
+        ▪ <strong>ครั้งที่ 5</strong> เมื่อวันที่ 9 - 13 มิถุนายน 2568<br>
+        ▪ <strong>ครั้งที่ 6</strong> เมื่อวันที่ 23 - 27 มิถุนายน 2568<br>
+        ▪ <strong>ครั้งที่ 7</strong> เมื่อวันที่ 30 มิถุนายน - 4 กรกฎาคม 2568<br>
+        ▪ <strong>ครั้งที่ 8</strong> เมื่อวันที่ 21 - 25 กรกฎาคม 2568<br>
+        ▪ <strong>ครั้งที่ 9</strong> เมื่อวันที่ 4 - 8 สิงหาคม 2568<br>
+        ▪ <strong>ครั้งที่ 10</strong> เมื่อวันที่ 18 – 22 สิงหาคม 2568<br>
+        ▪ <strong>ครั้งที่ 11</strong> เมื่อวันที่ 1 – 5 กันยายน 2568<br>
+        ▪ <strong>ครั้งที่ 12</strong> เมื่อวันที่ 22 – 26 กันยายน 2568<br>
+        ▪ <strong>ครั้งที่ 13</strong> เมื่อวันที่ 4 – 27 พฤศจิกายน 2568<br>
+        ▪ <strong>ครั้งที่ 14</strong> เมื่อวันที่ 22 – 26 ธันวาคม 2568
+    </div>
+    {% else %}
+        <div class="no-data">ไม่มีข้อมูลคุณภาพน้ำ</div>
+    {% endif %}
+        </div>
 
     <!-- ส่วนผลคุณภาพตะกอนดิน -->
     <div class="data-section">
         <h2><img src="/static/image/plant.png" alt="location icon" style="width: 30px;">&nbsp; ผลคุณภาพตะกอนดินในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง</h2>
-
-        {% if soil_data and soil_data.pivot %}
-            <!-- Tab Navigation -->
-            <div class="tab-nav">
-                <button class="tab-btn active" data-target="soil-table">ตาราง</button>
-                <button class="tab-btn" data-target="soil-chart">กราฟ</button>
-            </div>
-
-            <!-- ตาราง -->
-            <div id="soil-table" class="tab-content active">
-                <div class="data-table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>สารที่ตรวจ</th>
-                                {% for check_num in soil_data.check_numbers %}
-                                    <th>ครั้งที่ {{ check_num }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                    <tbody>
-                        {% for row in soil_data.pivot_list %}
+        {% if soil_data and soil_data.pivot_list_filtered %}
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-target="soil-table">ตาราง</button>
+            <button class="tab-btn" data-target="soil-chart">กราฟ</button>
+        </div>
+        <!-- ตาราง -->
+        <div id="soil-table" class="tab-content active">
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                <thead>
                     <tr>
-                        <td style="font-weight: 600; background: #f8f9fa;">{{ row.parameter }}</td>
+                        <th>สารที่ตรวจ</th>
                         {% for check_num in soil_data.check_numbers %}
-                            {% set check_str = check_num|string %}
-                            {% set val = row.check_values.get(check_str, '') %}
-                            {% set numeric_val = 0 %}
-                            {% set is_valid_number = false %}
-                            {% if val and val not in ['-', 'ND'] %}
-                                {% set numeric_val = val|float %}
-                                {% set is_valid_number = true %}
-                            {% endif %}
-
-                            <!-- กำหนดค่า limit ตามสาร (เฉพาะสารที่รองรับ) -->
-                            {% set unsafe_limit = none %}
-                            {% if row.parameter == 'สารหนู' %}
-                                {% set unsafe_limit = 33 %}
-                            {% elif row.parameter == 'แคดเมียม' %}
-                                {% set unsafe_limit = 5 %}
-                            {% elif row.parameter == 'นิกเกิล' %}
-                                {% set unsafe_limit = 50 %}
-                            {% elif row.parameter == 'ตะกั่ว' %}
-                                {% set unsafe_limit = 130 %}
-                            {% elif row.parameter == 'สังกะสี' %}
-                                {% set unsafe_limit = 460 %}
-                            {% elif row.parameter == 'ทองแดง' %}
-                                {% set unsafe_limit = 150 %}
-                            {% elif row.parameter == 'ปรอท' %}
-                                {% set unsafe_limit = 1.0 %}
-                            {% elif row.parameter == 'โครเมียม' %}
-                                {% set unsafe_limit = 110 %}
-                            {% endif %}
-
-                            <!-- แสดงผล: เปลี่ยนสีเฉพาะเมื่อเป็นสารที่รองรับ และเกินค่า -->
-                            <td {% if unsafe_limit is not none and is_valid_number and numeric_val >= unsafe_limit %}class="exceeds-limit"{% endif %}>
-                                {% if val and val not in ['-', 'ND'] %}
-                                    {{ val }}
-                                {% else %}
-                                    <span style="color: #ccc;">-</span>
-                                {% endif %}
-                            </td>
+                            <th>ครั้งที่ {{ check_num }}</th>
                         {% endfor %}
                     </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="chart-warning-legend">
-            <span class="legend-red">สีแดง</span> หมายถึง เกินมาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน
-        </div>
+                </thead>
+            <tbody>
+            {% for row in soil_data.pivot_list_filtered %}
+        <tr>
+    <td style="font-weight: 600; background: #f8f9fa;">{{ row.parameter }}</td>
+    {% for check_num in soil_data.check_numbers %}
+        {% set check_str = check_num|string %}
+        {% set val = row.check_values.get(check_str, '') %}
+        {% set numeric_val = 0 %}
+        {% set is_valid_number = false %}
+    {% if val and val not in ['-', 'ND'] %}
+        {% set numeric_val = val|float %}
+        {% set is_valid_number = true %}
+    {% endif %}
+    <!-- กำหนดค่า limit ตามสาร -->
+        {% set unsafe_limit = none %}
+    {% if row.parameter == 'สารหนู' %}
+        {% set unsafe_limit = 33 %}
+    {% elif row.parameter == 'แคดเมียม' %}
+        {% set unsafe_limit = 5 %}
+    {% elif row.parameter == 'นิกเกิล' %}
+        {% set unsafe_limit = 50 %}
+    {% elif row.parameter == 'ตะกั่ว' %}
+        {% set unsafe_limit = 130 %}
+    {% elif row.parameter == 'สังกะสี' %}
+        {% set unsafe_limit = 460 %}
+    {% elif row.parameter == 'ทองแดง' %}
+        {% set unsafe_limit = 150 %}
+    {% elif row.parameter == 'ปรอท' %}
+        {% set unsafe_limit = 1.0 %}
+    {% elif row.parameter == 'โครเมียม' %}
+        {% set unsafe_limit = 110 %}
+    {% endif %}
+    <!-- แสดงผล: เปลี่ยนสีเฉพาะเมื่อเกินค่า -->
+        <td {% if unsafe_limit is not none and is_valid_number and numeric_val >= unsafe_limit %}class="exceeds-limit"{% endif %}>
+            {% if val and val not in ['-', 'ND'] %}
+                {{ val }}
+            {% else %}
+                <span style="color: #ccc;">-</span>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<div class="chart-warning-legend">
+    <span class="legend-red">สีแดง</span> หมายถึง เกินมาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน
     </div>
-            
+</div>
     <!-- กราฟ -->
-            <div id="soil-chart" class="tab-content">
-                <div class="chart-container">
-                    <div class="parameter-selector">
-                        <select id="soil-parameter-select">
-                            <option value="">เลือกสารที่ตรวจ</option>
-                            {% for row in soil_data.pivot_list %}
-                                <option value="{{ row.parameter }}">{{ row.parameter }}</option>
-                            {% endfor %}
-                        </select>
-                        <button class="chart-toggle" id="soil-chart-toggle" style="display: none;">แสดงกราฟ</button>
-                    </div>
-                    <div id="soil-chart-container" style="display: none;">
-                        <div class="chart-wrapper">
-                            <canvas id="soilChart"></canvas>
-                        </div>
-                        <div class="chart-warning-legend">
-                            <span class="legend-blue">สีน้ำเงิน</span> หมายถึง มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน<br>
-                            <span class="legend-red">สีแดง</span> หมายถึง มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน
-                        </div>
-                        <div class="chart-warning">
-                            <img src="/static/image/warning.png" alt="location icon" style="width: 20px;">
-                            กรณีที่กราฟแสดงเป็น 0 เนื่องจากค่าน้อยกว่าที่ห้องปฏิบัติการสามารถอ่านผลได้ ให้ดูจากผลในตารางเป็นหลัก
-                        </div>
-                        
-                    </div>
-                </div>
+    <div id="soil-chart" class="tab-content">
+        <div class="chart-container">
+            <div class="parameter-selector">
+                <select id="soil-parameter-select">
+                    <option value="">เลือกสารที่ตรวจ</option>
+                    {% for row in soil_data.pivot_list_filtered %}
+                    <option value="{{ row.parameter }}">{{ row.parameter }}</option>
+                    {% endfor %}
+                </select>
+            <button class="chart-toggle" id="soil-chart-toggle" style="display: none;">แสดงกราฟ</button>
+        </div>
+        <div id="soil-chart-container" style="display: none;">
+            <div class="chart-wrapper">
+                <canvas id="soilChart"></canvas>
             </div>
-
-            <div class="period-note">
-                <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างตะกอนดินในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคมถึงเดือนพฤศจิกายน 2568 ดังนี้<br>
-                    ▪ <strong>ครั้งที่ 1</strong> เมื่อวันที่ 19 - 24 มีนาคม 2568 และวันที่ 9 เมษายน 2568<br>
-                    ▪ <strong>ครั้งที่ 2</strong> เมื่อวันที่ 21 - 24 เมษายน 2568 และวันที่ 29 เมษายน - 2 พฤษภาคม 2568<br>
-                    ▪ <strong>ครั้งที่ 3</strong> เมื่อวันที่ 26 - 30 พฤษภาคม 2568<br>
-                    ▪ <strong>ครั้งที่ 4</strong> เมื่อวันที่ 23 - 27 มิถุนายน 2568<br>
-                    ▪ <strong>ครั้งที่ 5</strong> เมื่อวันที่ 21 - 25 กรกฎาคม 2568<br>
-                    ▪ <strong>ครั้งที่ 6</strong> เมื่อวันที่ 18 – 22 สิงหาคม 2568<br>
-                    ▪ <strong>ครั้งที่ 7</strong> เมื่อวันที่ 22 – 26 กันยายน 2568<br>
-                    ▪ <strong>ครั้งที่ 8</strong> เมื่อวันที่ 11 – 14 พฤศจิกายน 2568
-                </div>
+            <div class="chart-warning-legend">
+                <span class="legend-blue">สีน้ำเงิน</span> หมายถึง มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน<br>
+                <span class="legend-red">สีแดง</span> หมายถึง มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน
             </div>
-        {% else %}
-            <div class="no-data">ไม่มีข้อมูลคุณภาพดิน</div>
-        {% endif %}
+            <div class="chart-warning">
+                <img src="/static/image/warning.png" alt="location icon" style="width: 20px;">
+                กรณีที่กราฟแสดงเป็น 0 เนื่องจากค่าน้อยกว่าที่ห้องปฏิบัติการสามารถอ่านผลได้ ให้ดูจากผลในตารางเป็นหลัก
+            </div>
+        </div>
     </div>
+    </div>
+    <div class="period-note">
+        <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างตะกอนดินในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคมถึงเดือนพฤศจิกายน 2568 ดังนี้<br>
+        ▪ <strong>ครั้งที่ 1</strong> เมื่อวันที่ 19 - 24 มีนาคม 2568 และวันที่ 9 เมษายน 2568<br>
+        ▪ <strong>ครั้งที่ 2</strong> เมื่อวันที่ 21 - 24 เมษายน 2568 และวันที่ 29 เมษายน - 2 พฤษภาคม 2568<br>
+        ▪ <strong>ครั้งที่ 3</strong> เมื่อวันที่ 26 - 30 พฤษภาคม 2568<br>
+        ▪ <strong>ครั้งที่ 4</strong> เมื่อวันที่ 23 - 27 มิถุนายน 2568<br>
+        ▪ <strong>ครั้งที่ 5</strong> เมื่อวันที่ 21 - 25 กรกฎาคม 2568<br>
+        ▪ <strong>ครั้งที่ 6</strong> เมื่อวันที่ 18 – 22 สิงหาคม 2568<br>
+        ▪ <strong>ครั้งที่ 7</strong> เมื่อวันที่ 22 – 26 กันยายน 2568<br>
+        ▪ <strong>ครั้งที่ 8</strong> เมื่อวันที่ 11 – 14 พฤศจิกายน 2568
+    </div>
+    {% else %}
+        <div class="no-data">ไม่มีข้อมูลคุณภาพดิน</div>
+    {% endif %}
+</div>
 
 <script>
 function deleteStation(stationCode) {
@@ -322,7 +306,7 @@ function deleteStation(stationCode) {
         .then(data => {
             if (data.success) {
                 alert('✅ ลบสถานีเรียบร้อยแล้ว');
-                window.location.href = '/'; // กลับไปหน้าหลัก
+                window.location.href = '/';
             } else {
                 alert('❌ เกิดข้อผิดพลาด: ' + data.message);
             }
@@ -330,186 +314,165 @@ function deleteStation(stationCode) {
     }
 }
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-    <script>
-        // Water data from backend
-        const waterData = {{ water_data|tojson }};
-        const soilData = {{ soil_data|tojson }};
-        
-        let waterChart = null;
-        let soilChart = null;
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+// Water data from backend
+const waterData = {{ water_data|tojson }};
+const soilData = {{ soil_data|tojson }};
+let waterChart = null;
+let soilChart = null;
 
-        function filterDataForChart(numeric_values, check_numbers) {
-            // Use numeric_values column from backend (ND, -, < are already set to 0)
-            const filteredData = [];
-            const filteredLabels = [];
-            
-            for (const checkNum of check_numbers) {
-                const checkStr = checkNum.toString();
-                const numValue = numeric_values[checkStr];
-                
-            // Use numeric value directly (0 for ND, -, <)
-                // Ensure it's a number, not string
-                if (numValue !== undefined && numValue !== null) {
-                    const num = typeof numValue === 'number' ? numValue : parseFloat(numValue);
-                        if (!isNaN(num)) {
-                            filteredData.push(num);
-                            filteredLabels.push(`ครั้งที่ ${checkNum}`);
-                        }
-                    }
-                }
-                return { data: filteredData, labels: filteredLabels };
+function filterDataForChart(numeric_values, check_numbers) {
+    const filteredData = [];
+    const filteredLabels = [];
+    for (const checkNum of check_numbers) {
+        const checkStr = checkNum.toString();
+        const numValue = numeric_values[checkStr];
+        if (numValue !== undefined && numValue !== null) {
+            const num = typeof numValue === 'number' ? numValue : parseFloat(numValue);
+            if (!isNaN(num)) {
+                filteredData.push(num);
+                filteredLabels.push(`ครั้งที่ ${checkNum}`);
             }
-
-            function createWaterChart(parameter) {
-                // Use filtered dataframe for chart
-                const row = waterData.pivot_list_filtered.find(r => r.parameter === parameter);
-                if (!row) {
-                    alert('ไม่พบข้อมูลที่กรองแล้วสำหรับ ' + parameter);
-                    return;
-                }   
-
-                // Check if row has numeric_values
-                if (!row.numeric_values || Object.keys(row.numeric_values).length === 0) {
-                    alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
-                    return;
-                }
-
-                // Debug: Check numeric_values
-                console.log('Row:', row);
-                console.log('numeric_values:', row.numeric_values);
-                console.log('Sample values:', Object.values(row.numeric_values).slice(0, 5));
-
-                const chartData = filterDataForChart(row.numeric_values, waterData.check_numbers);
-            
-                console.log('Chart data:', chartData);
-            
-                if (chartData.data.length === 0) {
-                    alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
-                    return;
-                }
-
-                const ctx = document.getElementById('waterChart').getContext('2d');
-            
-                if (waterChart) {
-                    waterChart.destroy();
-                }
-
-                waterChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: chartData.labels,
-                        datasets: [{
-                            label: `${parameter} (${row.unit})`,
-                            data: chartData.data,
-                            borderColor: 'rgb(102, 126, 234)',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            },
-                        title: {
-                            display: true,
-                            text: `กราฟแสดงค่าของ ${parameter}`,
-                            font: { size: 16 }
-                        },
-                        // เพิ่ม annotation สำหรับหลายสาร
-                        annotation: {
-                            annotations: (() => {
-                            // กำหนดค่ามาตรฐานแต่ละสาร
-                            const thresholds = {
-                                'สารหนู': 0.01,
-                                'แมงกานีส': 1.0,
-                                'ตะกั่ว': 0.05,
-                                'ปรอท': 0.002,
-                                'ทองแดง': 0.1,
-                                'สังกะสี': 1.0,
-                                'นิกเกิล': 0.1,
-                                'แคดเมียม': 0.005
-                            };
-
-                            const thresholdValue = thresholds[parameter];
-                            if (thresholdValue === undefined) {
-                            return {}; // ไม่มีค่ามาตรฐาน → ไม่แสดงเส้น
-                            }
-
-                            return {
-                                thresholdLine: {
-                                    type: 'line',
-                                    yMin: thresholdValue,
-                                    yMax: thresholdValue,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: `ค่ามาตรฐาน: ${thresholdValue}`,
-                                        position: 'start',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        })()
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        title: {
-                            display: true,
-                            text: `ค่า (${row.unit})`
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'ครั้งที่ตรวจ'
-                        }
-                    }
-                }
-            }
-        });
+        }
     }
-        
-    function createSoilChart(parameter) {
-    // Use filtered dataframe for chart
-    const row = soilData.pivot_list_filtered.find(r => r.parameter === parameter);
-    if (!row) {
-        alert('ไม่พบข้อมูลที่กรองแล้วสำหรับ ' + parameter);
-        return;
-    }
+    return { data: filteredData, labels: filteredLabels };
+}
 
-    // Check if row has numeric_values
-    if (!row.numeric_values || Object.keys(row.numeric_values).length === 0) {
+function createWaterChart(parameter) {
+    const row = waterData.pivot_list_filtered.find(r => r.parameter === parameter);
+    if (!row || !row.numeric_values || Object.keys(row.numeric_values).length === 0) {
         alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
         return;
     }
+
+    const chartData = filterDataForChart(row.numeric_values, waterData.check_numbers);
+    if (chartData.data.length === 0) {
+        alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
+        return;
+    }
+
+    const ctx = document.getElementById('waterChart').getContext('2d');
+    if (waterChart) waterChart.destroy();
+
+    // Thresholds for water
+    const thresholds = {
+        'สารหนู': 0.01,
+        'แมงกานีส': 1.0,
+        'ตะกั่ว': 0.05,
+        'ปรอท': 0.002,
+        'ทองแดง': 0.1,
+        'สังกะสี': 1.0,
+        'นิกเกิล': 0.1,
+        'แคดเมียม': 0.005
+    };
+
+    waterChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: `${parameter} (${row.unit})`,
+                data: chartData.data,
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                title: { display: true, text: `กราฟแสดงค่าของ ${parameter}`, font: { size: 16 } },
+                annotation: {
+                    annotations: (() => {
+                        const thresholdValue = thresholds[parameter];
+                        if (thresholdValue === undefined) return {};
+                        return {
+                            thresholdLine: {
+                                type: 'line',
+                                yMin: thresholdValue,
+                                yMax: thresholdValue,
+                                borderColor: 'red',
+                                borderWidth: 2,
+                                borderDash: [6, 6],
+                                label: {
+                                    display: true,
+                                    content: `ค่ามาตรฐาน: ${thresholdValue}`,
+                                    position: 'start',
+                                    backgroundColor: 'red',
+                                    color: 'white',
+                                    font: { size: 12 }
+                                }
+                            }
+                        };
+                    })()
+                }
+            },
+            scales: {
+                y: { beginAtZero: false, title: { display: true, text: `ค่า (${row.unit})` } },
+                x: { title: { display: true, text: 'ครั้งที่ตรวจ' } }
+            }
+        }
+    });
+}
+
+function createSoilChart(parameter) {
+    const row = soilData.pivot_list_filtered.find(r => r.parameter === parameter);
+    if (!row || !row.numeric_values || Object.keys(row.numeric_values).length === 0) {
+        alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
+        return;
+    }
+
     const chartData = filterDataForChart(row.numeric_values, soilData.check_numbers);
-            
     if (chartData.data.length === 0) {
         alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
         return;
     }
 
     const ctx = document.getElementById('soilChart').getContext('2d');
-            
-    if (soilChart) {
-        soilChart.destroy();
+    if (soilChart) soilChart.destroy();
+
+    // Soil thresholds
+    const safeLimits = {
+        'สารหนู': 10, 'แคดเมียม': 1, 'นิกเกิล': 23, 'ตะกั่ว': 36,
+        'สังกะสี': 120, 'ทองแดง': 31.5, 'ปรอท': 0.2, 'โครเมียม': 43.4
+    };
+    const unsafeLimits = {
+        'สารหนู': 33, 'แคดเมียม': 5, 'นิกเกิล': 50, 'ตะกั่ว': 130,
+        'สังกะสี': 460, 'ทองแดง': 150, 'ปรอท': 1.0, 'โครเมียม': 110
+    };
+
+    const annotations = {};
+    if (safeLimits[parameter] !== undefined) {
+        annotations.safeLine = {
+            type: 'line', yMin: safeLimits[parameter], yMax: safeLimits[parameter],
+            borderColor: 'blue', borderWidth: 2, borderDash: [6, 6],
+            label: {
+                display: true,
+                content: `มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ ${safeLimits[parameter]}`,
+                position: 'start', backgroundColor: 'blue', color: 'white', font: { size: 12 }
+            }
+        };
     }
+    if (unsafeLimits[parameter] !== undefined) {
+        annotations.unsafeLine = {
+            type: 'line', yMin: unsafeLimits[parameter], yMax: unsafeLimits[parameter],
+            borderColor: 'red', borderWidth: 2, borderDash: [6, 6],
+            label: {
+                display: true,
+                content: `มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ ${unsafeLimits[parameter]}`,
+                position: 'end', backgroundColor: 'red', color: 'white', font: { size: 12 }
+            }
+        };
+    }
+
     soilChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -524,458 +487,131 @@ function deleteStation(stationCode) {
                 fill: true,
                 pointRadius: 5,
                 pointHoverRadius: 7
-             }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                title: {
-                        display: true,
-                        text: `กราฟแสดงค่าของ ${parameter}`,
-                        font: { size: 16 }
-                },
-                // เพิ่ม annotation สำหรับสารในตะกอนดิน
-                annotation: {
-                    annotations: (() => {
-                        if (parameter === 'สารหนู') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 10,
-                                    yMax: 10,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 10',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 33,
-                                    yMax: 33,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 33',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'แคดเมียม') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 1,
-                                    yMax: 1,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 1',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 5,
-                                    yMax: 5,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 5',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'นิกเกิล') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 23,
-                                    yMax: 23,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 23',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 50,
-                                    yMax: 50,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 50',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'ตะกั่ว') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 36,
-                                    yMax: 36,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 36',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 130,
-                                    yMax: 130,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 130',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'สังกะสี') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 120,
-                                    yMax: 120,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 120',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 460,
-                                    yMax: 460,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 460',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'ทองแดง') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 31.5,
-                                    yMax: 31.5,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 31.5',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                        type: 'line',
-                                        yMin: 150,
-                                        yMax: 150,
-                                        borderColor: 'red',
-                                        borderWidth: 2,
-                                        borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 150',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'ปรอท') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 0.2,
-                                    yMax: 0.2,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 0.2',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 1.0,
-                                    yMax: 1.0,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 1.0',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                        else if (parameter === 'โครเมียม') {
-                            return {
-                                safeLine: {
-                                    type: 'line',
-                                    yMin: 43.4,
-                                    yMax: 43.4,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 43.4',
-                                        position: 'start',
-                                        backgroundColor: 'blue',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                },
-                                unsafeLine: {
-                                    type: 'line',
-                                    yMin: 110,
-                                    yMax: 110,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 110',
-                                        position: 'end',
-                                        backgroundColor: 'red',
-                                        color: 'white',
-                                        font: { size: 12 }
-                                    }
-                                }
-                            };
-                        }
-                return {};
-            })()
-        }
-    },
-    scales: {
-        y: {
-            beginAtZero: false,
-            title: {
-                display: true,
-                text: 'ค่า'
-            }
+            }]
         },
-        x: {
-            title: {
-                display: true,
-                text: 'ครั้งที่ตรวจ'
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                title: { display: true, text: `กราฟแสดงค่าของ ${parameter}`, font: { size: 16 } },
+                annotation: { annotations }
+            },
+            scales: {
+                y: { beginAtZero: false, title: { display: true, text: 'ค่า' } },
+                x: { title: { display: true, text: 'ครั้งที่ตรวจ' } }
             }
         }
-    }
-}
-    }); 
+    });
 }
 
-    // Tab switching logic
-    function setupTabSwitching() {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
-                const section = btn.closest('.data-section');
-
-                // Remove active from all buttons & contents in this section
-                section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                section.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-                // Activate clicked tab
-                btn.classList.add('active');
-                document.getElementById(targetId).classList.add('active');
-
-                if (targetId.includes('chart')) {
-                // ซ่อน container และ toggle button จนกว่าจะเลือกพารามิเตอร์
-                    const container = document.getElementById(targetId.replace('-chart', '-chart-container'));
-                    const toggleBtn = document.getElementById(targetId.replace('-chart', '-chart-toggle'));
-                    if (container) container.style.display = 'none';
-                    if (toggleBtn) toggleBtn.style.display = 'none';
-                }
-            });
+function setupTabSwitching() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const section = btn.closest('.data-section');
+            section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            section.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(targetId).classList.add('active');
+            if (targetId.includes('chart')) {
+                const container = document.getElementById(targetId.replace('-chart', '-chart-container'));
+                const toggleBtn = document.getElementById(targetId.replace('-chart', '-chart-toggle'));
+                if (container) container.style.display = 'none';
+                if (toggleBtn) toggleBtn.style.display = 'none';
+            }
         });
-    }
+    });
+}
 
-    document.addEventListener('DOMContentLoaded', function() {
-        setupTabSwitching();
-    
+document.addEventListener('DOMContentLoaded', function() {
+    setupTabSwitching();
     if (typeof Chart !== 'undefined') {
-        initCharts();
+        // Chart.js already loaded
     } else {
-        const checkChart = setInterval(function() {
+        const checkChart = setInterval(() => {
             if (typeof Chart !== 'undefined') {
                 clearInterval(checkChart);
-                initCharts();
             }
         }, 100);
     }
 });
 
-    // Wait for Chart.js to load
-    function initCharts() {
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js is not loaded');
-            return;
-        }
+// Water chart handlers
+document.addEventListener('DOMContentLoaded', function() {
+    const waterParamSelect = document.getElementById('water-parameter-select');
+    const waterChartToggle = document.getElementById('water-chart-toggle');
+    const waterChartContainer = document.getElementById('water-chart-container');
 
-        // Water chart handlers
-        const waterParamSelect = document.getElementById('water-parameter-select');
-        const waterChartToggle = document.getElementById('water-chart-toggle');
-        const waterChartContainer = document.getElementById('water-chart-container');
+    if (waterParamSelect) {
+        waterParamSelect.addEventListener('change', function() {
+            if (this.value) {
+                waterChartToggle.style.display = 'inline-block';
+                waterChartToggle.classList.remove('active');
+                waterChartContainer.style.display = 'none';
+                if (waterChart) {
+                    waterChart.destroy();
+                    waterChart = null;
+                }
+            } else {
+                waterChartToggle.style.display = 'none';
+                waterChartContainer.style.display = 'none';
+            }
+        });
 
-        if (waterParamSelect) {
-            waterParamSelect.addEventListener('change', function() {
-                if (this.value) {
-                    waterChartToggle.style.display = 'inline-block';
-                    waterChartToggle.classList.remove('active');
+        waterChartToggle.addEventListener('click', function() {
+            if (waterParamSelect.value) {
+                if (this.classList.contains('active')) {
+                    this.classList.remove('active');
+                    this.textContent = 'แสดงกราฟ';
                     waterChartContainer.style.display = 'none';
-                    if (waterChart) {
-                        waterChart.destroy();
-                        waterChart = null;
-                    }
                 } else {
-                    waterChartToggle.style.display = 'none';
-                    waterChartContainer.style.display = 'none';
+                    this.classList.add('active');
+                    this.textContent = 'ซ่อนกราฟ';
+                    waterChartContainer.style.display = 'block';
+                    createWaterChart(waterParamSelect.value);
                 }
-            });
-
-            waterChartToggle.addEventListener('click', function() {
-                if (waterParamSelect.value) {
-                    if (this.classList.contains('active')) {
-                        this.classList.remove('active');
-                        this.textContent = 'แสดงกราฟ';
-                        waterChartContainer.style.display = 'none';
-                    } else {
-                        this.classList.add('active');
-                        this.textContent = 'ซ่อนกราฟ';
-                        waterChartContainer.style.display = 'block';
-                        createWaterChart(waterParamSelect.value);
-                    }
-                }
-            });
-        }
-
-        // Soil chart handlers
-        const soilParamSelect = document.getElementById('soil-parameter-select');
-        const soilChartToggle = document.getElementById('soil-chart-toggle');
-        const soilChartContainer = document.getElementById('soil-chart-container');
-
-        if (soilParamSelect) {
-            soilParamSelect.addEventListener('change', function() {
-                if (this.value) {
-                    soilChartToggle.style.display = 'inline-block';
-                    soilChartToggle.classList.remove('active');
-                    soilChartContainer.style.display = 'none';
-                    if (soilChart) {
-                        soilChart.destroy();
-                        soilChart = null;
-                    }
-                } else {
-                    soilChartToggle.style.display = 'none';
-                    soilChartContainer.style.display = 'none';
-                }
-            });
-
-            soilChartToggle.addEventListener('click', function() {
-                if (soilParamSelect.value) {
-                    if (this.classList.contains('active')) {
-                        this.classList.remove('active');
-                        this.textContent = 'แสดงกราฟ';
-                        soilChartContainer.style.display = 'none';
-                    } else {
-                        this.classList.add('active');
-                        this.textContent = 'ซ่อนกราฟ';
-                        soilChartContainer.style.display = 'block';
-                        createSoilChart(soilParamSelect.value);
-                    }
-                }
-            });
-        }
+            }
+        });
     }
-    </script>
+
+    // Soil chart handlers
+    const soilParamSelect = document.getElementById('soil-parameter-select');
+    const soilChartToggle = document.getElementById('soil-chart-toggle');
+    const soilChartContainer = document.getElementById('soil-chart-container');
+
+    if (soilParamSelect) {
+        soilParamSelect.addEventListener('change', function() {
+            if (this.value) {
+                soilChartToggle.style.display = 'inline-block';
+                soilChartToggle.classList.remove('active');
+                soilChartContainer.style.display = 'none';
+                if (soilChart) {
+                    soilChart.destroy();
+                    soilChart = null;
+                }
+            } else {
+                soilChartToggle.style.display = 'none';
+                soilChartContainer.style.display = 'none';
+            }
+        });
+
+        soilChartToggle.addEventListener('click', function() {
+            if (soilParamSelect.value) {
+                if (this.classList.contains('active')) {
+                    this.classList.remove('active');
+                    this.textContent = 'แสดงกราฟ';
+                    soilChartContainer.style.display = 'none';
+                } else {
+                    this.classList.add('active');
+                    this.textContent = 'ซ่อนกราฟ';
+                    soilChartContainer.style.display = 'block';
+                    createSoilChart(soilParamSelect.value);
+                }
+            }
+        });
+    }
+});
+</script>
 </body>
 </html>
-
