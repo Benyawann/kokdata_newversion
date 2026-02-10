@@ -132,7 +132,7 @@
         {% endif %}
     <script id>
         // Location hierarchy data from backend
-        const locationHierarchy = {{ location_hierarchy|tojson }};
+        const locationHierarchy = JSON.parse('{{ location_hierarchy|tojson|safe }}');
         
         const searchInput = document.getElementById('search-input');
         const filterRiver = document.getElementById('filter-river');
