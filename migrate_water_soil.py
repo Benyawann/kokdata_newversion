@@ -4,7 +4,7 @@ import psycopg2
 # เชื่อมต่อฐานข้อมูล
 sqlite_conn = sqlite3.connect('kok_data.db')
 pg_conn = psycopg2.connect(
-    host='127.0.0.1',
+    host='localhost',
     port=5432,
     database='postgres',
     user='postgres',

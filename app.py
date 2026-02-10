@@ -9,7 +9,7 @@ from psycopg2.extras import RealDictCursor
 
 # การตั้งค่า PostgreSQL
 PG_CONFIG = {
-    'host': os.environ.get('PG_HOST', '127.0.0.1'),
+    'host': os.environ.get('PG_HOST', 'localhost'),
     'port': os.environ.get('PG_PORT', 5432),
     'database': os.environ.get('PG_DATABASE', 'postgres'),
     'user': os.environ.get('PG_USER', 'postgres'),
