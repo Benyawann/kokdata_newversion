@@ -3,9 +3,43 @@
 """
 Flask web application to display station list
 """
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
+# การตั้งค่า PostgreSQL
+PG_CONFIG = {
+    'host': os.environ.get('PG_HOST', '127.0.0.1'),
+    'port': os.environ.get('PG_PORT', 5432),
+    'database': os.environ.get('PG_DATABASE', 'postgres'),
+    'user': os.environ.get('PG_USER', 'postgres'),
+    'password': os.environ.get('PG_PASSWORD', 'password123')
+}
+
+def get_pg_connection():
+    """สร้างการเชื่อมต่อกับ PostgreSQL"""
+    return psycopg2.connect(**PG_CONFIG)
+
+def pg_execute(query, params=None, fetch=False):
+    """รันคำสั่ง SQL กับ PostgreSQL"""
+    conn = get_pg_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(query, params)
+        if fetch:
+            result = cur.fetchall()
+            conn.close()
+            return result
+        else:
+            conn.commit()
+            conn.close()
+            return True
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise e
+    
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
-import sqlite3
 import os
 import secrets
 
@@ -31,17 +65,10 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        print(f"DEBUG: กรอก username='{username}', password='{password}'")  # ← เพิ่มบรรทัดนี้
+        query = "SELECT password FROM users WHERE username = %s"
+        rows = pg_execute(query, (username,), fetch=True)
         
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT password FROM users WHERE username = ?", (username,))
-        row = cur.fetchone()
-        conn.close()
-        
-        print(f"DEBUG: ดึงข้อมูลจาก DB ได้: {row}")  # ← เพิ่มบรรทัดนี้
-        
-        if row and row[0] == password:
+        if rows and rows[0]['password'] == password:
             session['logged_in'] = True
             session['username'] = username
             return redirect(url_for('index'))
@@ -64,33 +91,28 @@ def after_request(response):
     return response
 
 def get_stations():
-    """Get all stations from database"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    
-    cursor = conn.execute("""
+    """Get all stations from PostgreSQL"""
+    query = """
         SELECT 
             id,
-            "\ufeffแม่น้ำ" as river,
-            "สถานี" as station,
-            "บริเวณที่เก็บ" as location,
-            "ตำบล" as tambon,
-            "อำเภอ" as amphoe,
-            "จังหวัด" as province
+            river,
+            station,
+            location,
+            tambon,
+            amphoe,
+            province
         FROM station_data
-        ORDER BY "\ufeffแม่น้ำ", "สถานี"
-    """)
+    """
+    rows = pg_execute(query, fetch=True)
     
+    # Clean whitespace
     stations = []
-    for row in cursor.fetchall():
+    for row in rows:
         station_dict = dict(row)
-        # Clean up whitespace from all string fields
         for key, value in station_dict.items():
             if isinstance(value, str):
                 station_dict[key] = value.strip()
         stations.append(station_dict)
-    
-    conn.close()
     
     return stations
 
@@ -99,6 +121,9 @@ def index():
     """Main page showing station list"""
     try:
         stations = get_stations()
+        print(f"DEBUG: ได้ {len(stations)} สถานี")
+        if stations:
+            print(f"ตัวอย่าง: {stations[0]}")
         
         # Get unique values for filters
         unique_rivers = sorted(list(set([s['river'] for s in stations if s['river']])))
@@ -134,6 +159,7 @@ def index():
                              unique_amphoes=unique_amphoes,
                              location_hierarchy=location_hierarchy)
     except Exception as e:
+        print(f"ERROR: {e}")
         return f"Error loading page: {str(e)}", 500
 
 @app.route('/api/stations')
@@ -148,28 +174,23 @@ def test():
     return "Flask app is working!"
 
 def get_station_by_code(station_code):
-    """Get station information by station code"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    
-    cursor = conn.execute("""
+    """Get station information by station code from PostgreSQL"""
+    query = """
         SELECT 
             id,
-            "\ufeffแม่น้ำ" as river,
-            "สถานี" as station,
-            "บริเวณที่เก็บ" as location,
-            "ตำบล" as tambon,
-            "อำเภอ" as amphoe,
-            "จังหวัด" as province
+            river,
+            station,
+            location,
+            tambon,
+            amphoe,
+            province
         FROM station_data
-        WHERE TRIM("สถานี") = ?
-    """, (station_code.strip(),))
+        WHERE TRIM(station) = %s
+    """
+    rows = pg_execute(query, (station_code.strip(),), fetch=True)
     
-    row = cursor.fetchone()
-    conn.close()
-    
-    if row:
-        station_dict = dict(row)
+    if rows:
+        station_dict = dict(rows[0])
         # Clean up whitespace
         for key, value in station_dict.items():
             if isinstance(value, str):
@@ -178,47 +199,39 @@ def get_station_by_code(station_code):
     return None
 
 def get_water_data(station_code):
-    """Get water quality data for a station, organized as pivot table"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    
-    cursor = conn.execute("""
+    print(f"🔍 กำลังค้นหา water_data สำหรับ station: '{station_code}'")
+    query = """
         SELECT 
-            "\ufeffสิ่งที่ตรวจ" as parameter,
-            "ที่ตั้ง" as location,
-            "ครั้งที่ตรวจ" as check_number,
-            "ค่าที่ได้" as value,
-            "ค่าที่วัดได้" as numeric_value,
-            "หน่วย" as unit
+            parameter,
+            location,
+            check_number,
+            value,
+            numeric_value,
+            unit
         FROM water_data
-        WHERE TRIM("สถานี") = ?
-        ORDER BY CAST(SUBSTR("ครั้งที่ตรวจ", 6) AS INTEGER), "\ufeffสิ่งที่ตรวจ"
-    """, (station_code.strip(),))
+        WHERE TRIM(station) = TRIM(%s)
+    """
+    rows = pg_execute(query, (station_code.strip(),), fetch=True)
+    print(f"✅ พบ {len(rows)} แถว")
     
-    # Organize data as pivot table: {parameter: {check_number: value}}
+    # Organize data as pivot table
     pivot_data = {}
     numeric_data = {}
-    check_numbers = []  # เปลี่ยนจาก set() เป็น list เพื่อรักษาลำดับ
+    check_numbers = []
     unit_info = {}
     
-    for row in cursor.fetchall():
-        row_dict = dict(row)
-        for key, value in row_dict.items():
-            if isinstance(value, str):
-                row_dict[key] = value.strip()
-        
-        param = row_dict['parameter']
-        check_num = row_dict['check_number']
-        value = row_dict['value']
-        numeric_value = row_dict.get('numeric_value', 0) if row_dict.get('numeric_value') is not None else 0
-        unit = row_dict['unit']
+    for row in rows:
+        param = row['parameter']
+        check_num = row['check_number']
+        value = row['value']
+        numeric_value = row.get('numeric_value', 0) if row.get('numeric_value') is not None else 0
+        unit = row['unit']
         
         if param not in pivot_data:
             pivot_data[param] = {}
             numeric_data[param] = {}
             unit_info[param] = unit
         
-        # ดึงตัวเลขจาก "ครั้งที่ X"
         try:
             check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
             if check_num_int not in check_numbers:
@@ -231,26 +244,21 @@ def get_water_data(station_code):
             pivot_data[param][check_num] = value
             numeric_data[param][check_num] = numeric_value
     
-    conn.close()
-    
     # จัดเรียง check_numbers
     numeric_checks = sorted([c for c in check_numbers if isinstance(c, int)])
     text_checks = sorted([c for c in check_numbers if not isinstance(c, int)])
     sorted_checks = numeric_checks + text_checks
     
-    # Convert to list format for template
+    # Convert to list format
     parameters = sorted(pivot_data.keys())
-    pivot_list = []
-    for param in parameters:
-        row_data = {'parameter': param, 'check_values': {}, 'unit': unit_info.get(param, '')}
-        for check_num in sorted_checks:
-            value = pivot_data[param].get(check_num, None)
-            row_data['check_values'][str(check_num)] = value if value else None
-        pivot_list.append(row_data)
-    
     pivot_list_filtered = []
     for param in parameters:
-        row_data_filtered = {'parameter': param, 'check_values': {}, 'numeric_values': {}, 'unit': unit_info.get(param, '')}
+        row_data_filtered = {
+            'parameter': param, 
+            'check_values': {}, 
+            'numeric_values': {}, 
+            'unit': unit_info.get(param, '')
+        }
         for check_num in sorted_checks:
             value = pivot_data[param].get(check_num, None)
             numeric_value = numeric_data[param].get(check_num, 0)
@@ -259,8 +267,6 @@ def get_water_data(station_code):
         pivot_list_filtered.append(row_data_filtered)
     
     return {
-        'pivot': pivot_data,
-        'pivot_list': pivot_list,
         'pivot_list_filtered': pivot_list_filtered,
         'check_numbers': sorted_checks,
         'units': unit_info,
@@ -268,46 +274,35 @@ def get_water_data(station_code):
     }
 
 def get_soil_data(station_code):
-    """Get soil quality data for a station, organized as pivot table"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    
-    cursor = conn.execute("""
-        SELECT 
-            "สารที่ตรวจ" as parameter,
-            "บริเวณจุดเก็บ" as location,
-            "ครั้งที่ตรวจ" as check_number,
-            "ค่าที่ได้" as value,
-            "ค่าที่วัดได้" as numeric_value
+    """Get soil quality data from PostgreSQL"""
+    query = """
+         SELECT 
+            parameter,
+            location,
+            check_number,
+            value,
+            numeric_value
         FROM soil_data
-        WHERE TRIM("สถานี") = ?
-        ORDER BY CAST(SUBSTR("ครั้งที่ตรวจ", 6) AS INTEGER), "สารที่ตรวจ"
-    """, (station_code.strip(),))
+        WHERE TRIM(station) = %s
+    """
+    rows = pg_execute(query, (station_code.strip(),), fetch=True)
     
-    # Organize data as pivot table: {parameter: {check_number: value}}
     pivot_data = {}
     numeric_data = {}
-    check_numbers = []  # เปลี่ยนจาก set() เป็น list เพื่อรักษาลำดับ
+    check_numbers = []
     
-    for row in cursor.fetchall():
-        row_dict = dict(row)
-        for key, value in row_dict.items():
-            if isinstance(value, str):
-                row_dict[key] = value.strip()
-        
-        param = row_dict['parameter']
-        check_num = row_dict['check_number']
-        value = row_dict['value']
-        numeric_value = row_dict.get('numeric_value', 0) if row_dict.get('numeric_value') is not None else 0
+    for row in rows:
+        param = row['parameter']
+        check_num = row['check_number']
+        value = row['value']
+        numeric_value = row.get('numeric_value', 0) if row.get('numeric_value') is not None else 0
         
         if param not in pivot_data:
             pivot_data[param] = {}
             numeric_data[param] = {}
         
-        # ดึงตัวเลขจาก "ครั้งที่ X"
         try:
             check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
-            # เพิ่มเฉพาะตัวเลขที่ยังไม่มีใน list
             if check_num_int not in check_numbers:
                 check_numbers.append(check_num_int)
             pivot_data[param][check_num_int] = value
@@ -318,23 +313,11 @@ def get_soil_data(station_code):
             pivot_data[param][check_num] = value
             numeric_data[param][check_num] = numeric_value
     
-    conn.close()
-    
-    # จัดเรียง check_numbers (ถ้ามีทั้งตัวเลขและ text)
     numeric_checks = sorted([c for c in check_numbers if isinstance(c, int)])
     text_checks = sorted([c for c in check_numbers if not isinstance(c, int)])
     sorted_checks = numeric_checks + text_checks
     
-    # Convert to list format for template
     parameters = sorted(pivot_data.keys())
-    pivot_list = []
-    for param in parameters:
-        row_data = {'parameter': param, 'check_values': {}}
-        for check_num in sorted_checks:
-            value = pivot_data[param].get(check_num, None)
-            row_data['check_values'][str(check_num)] = value if value else None
-        pivot_list.append(row_data)
-    
     pivot_list_filtered = []
     for param in parameters:
         row_data_filtered = {'parameter': param, 'check_values': {}, 'numeric_values': {}}
@@ -346,8 +329,6 @@ def get_soil_data(station_code):
         pivot_list_filtered.append(row_data_filtered)
     
     return {
-        'pivot': pivot_data,
-        'pivot_list': pivot_list,
         'pivot_list_filtered': pivot_list_filtered,
         'check_numbers': sorted_checks,
         'parameters': parameters
@@ -358,7 +339,6 @@ def get_soil_data(station_code):
 def add_station():
     if request.method == 'POST':
         try:
-            # 1. รับข้อมูลสถานี
             station = request.form['station'].strip()
             river = request.form['river'].strip()
             tambon = request.form['tambon'].strip()
@@ -366,22 +346,19 @@ def add_station():
             province = request.form['province'].strip()
             location = request.form['location'].strip()
 
-            conn = sqlite3.connect(DB_PATH)
-            cur = conn.cursor()
+            # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
+            query = '''
+                INSERT INTO station_data (station, river, tambon, amphoe, province, location)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            '''
+            pg_execute(query, (station, river, tambon, amphoe, province, location))
 
-            # 2. บันทึกสถานี
-            cur.execute('''
-                INSERT INTO station_data ("สถานี", "\ufeffแม่น้ำ", "ตำบล", "อำเภอ", "จังหวัด", "บริเวณที่เก็บ")
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (station, river, tambon, amphoe, province, location))
-
-            # 3. รับพารามิเตอร์น้ำและดิน
+            # บันทึกข้อมูลน้ำ
             parameters = request.form.getlist('parameter[]')
             units = request.form.getlist('unit[]')
-            soil_params = request.form.getlist('soil_parameter[]')  # ⚠️ ลืมประกาศ!
-
-            # 4. บันทึกข้อมูลน้ำ (14 ครั้ง)
-            for i in range(1, 15):
+            
+            water_check_count = int(request.form.get('water_check_count', 14))
+            for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
                 for idx, param in enumerate(parameters):
                     if idx < len(check_values):
@@ -393,13 +370,17 @@ def add_station():
                                 numeric_value = 0.0 if value.startswith('<') else float(value)
                             except ValueError:
                                 pass
-                        cur.execute('''
-                            INSERT INTO water_data ("สถานี", "\ufeffสิ่งที่ตรวจ", "หน่วย", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        ''', (station, param, unit, f'ครั้งที่ {i}', value, numeric_value))
+                        # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
+                        insert_water = '''
+                            INSERT INTO water_data (station, parameter, unit, check_number, value, numeric_value)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        '''
+                        pg_execute(insert_water, (station, param, unit, f'ครั้งที่ {i}', value, numeric_value))
 
-            # 5. บันทึกข้อมูลดิน (8 ครั้ง)
-            for i in range(1, 9):
+            # บันทึกข้อมูลดิน
+            soil_params = request.form.getlist('soil_parameter[]')
+            soil_check_count = int(request.form.get('soil_check_count', 8))
+            for i in range(1, soil_check_count + 1):
                 soil_check_values = request.form.getlist(f'soil_check{i}[]')
                 for idx, param in enumerate(soil_params):
                     if idx < len(soil_check_values):
@@ -410,47 +391,35 @@ def add_station():
                                 numeric_value = 0.0 if value.startswith('<') else float(value)
                             except ValueError:
                                 pass
-                        cur.execute('''
-                            INSERT INTO soil_data ("สถานี", "สารที่ตรวจ", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
-                            VALUES (?, ?, ?, ?, ?)
-                        ''', (station, param, f'ครั้งที่ {i}', value, numeric_value))
-                        pass
+                        # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
+                        insert_soil = '''
+                            INSERT INTO soil_data (station, parameter, check_number, value, numeric_value)
+                            VALUES (%s, %s, %s, %s, %s)
+                        '''
+                        pg_execute(insert_soil, (station, param, f'ครั้งที่ {i}', value, numeric_value))
 
-            conn.commit()
-            conn.close()
             return jsonify({'success': True})
 
         except Exception as e:
             print("Error saving station:", str(e))
             return jsonify({'success': False, 'message': str(e)})
 
-    # GET: แสดงฟอร์ม
-    return render_template('add_station.html')
-
 @app.route('/delete-station/<station_code>', methods=['DELETE'])
 @login_required
 def delete_station(station_code):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        
-        # ลบข้อมูลทั้งหมดที่เกี่ยวข้องกับสถานีนี้
-        cur.execute('DELETE FROM water_data WHERE TRIM("สถานี") = ?', (station_code.strip(),))
-        cur.execute('DELETE FROM soil_data WHERE TRIM("สถานี") = ?', (station_code.strip(),))
-        cur.execute('DELETE FROM station_data WHERE TRIM("สถานี") = ?', (station_code.strip(),))
-        
-        conn.commit()
-        conn.close()
-        pass
+        # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
+        pg_execute('DELETE FROM water_data WHERE TRIM(station) = %s', (station_code.strip(),))
+        pg_execute('DELETE FROM soil_data WHERE TRIM(station) = %s', (station_code.strip(),))
+        pg_execute('DELETE FROM station_data WHERE TRIM(station) = %s', (station_code.strip(),))
         
         return jsonify({'success': True})
     except Exception as e:
         print("Error deleting station:", str(e))
         return jsonify({'success': False, 'message': str(e)}), 500
-
+    
 @app.route('/station/<station_code>')
 def station_detail(station_code):
-    """Display detailed information for a specific station"""
     try:
         station = get_station_by_code(station_code)
         if not station:
@@ -459,12 +428,26 @@ def station_detail(station_code):
         water_data = get_water_data(station_code)
         soil_data = get_soil_data(station_code)
         
+        # เพิ่ม debug
+        print(f"DEBUG water_data: {len(water_data['pivot_list_filtered'])} parameters")
+        print(f"DEBUG soil_data: {len(soil_data['pivot_list_filtered'])} parameters")
+        
         return render_template('station_detail.html',
                              station=station,
                              water_data=water_data,
                              soil_data=soil_data)
     except Exception as e:
-        return f"Error loading station: {str(e)}", 500
+        print(f"ERROR in station_detail: {e}")
+        return f"Error: {e}", 500
+    
+@app.route('/api/water/<station_code>')
+def api_water(station_code):
+    water_data = get_water_data(station_code)
+    return jsonify(water_data)
+
+def api_water(station_code):
+    water_data = get_water_data(station_code)
+    return jsonify(water_data)
 
 @app.route('/edit-station/<station_code>', methods=['GET', 'POST'])
 @login_required
@@ -479,26 +462,24 @@ def edit_station(station_code):
             province = request.form['province'].strip()
             location = request.form['location'].strip()
 
-            conn = sqlite3.connect(DB_PATH)
-            cur = conn.cursor()
-
             # 1. อัปเดตข้อมูลสถานี
-            cur.execute('''
+            update_query = '''
                 UPDATE station_data 
-                SET "สถานี" = ?, "\ufeffแม่น้ำ" = ?, "ตำบล" = ?, "อำเภอ" = ?, "จังหวัด" = ?, "บริเวณที่เก็บ" = ?
-                WHERE TRIM("สถานี") = ?
-            ''', (station, river, tambon, amphoe, province, location, station_code))
+                SET station = %s, river = %s, tambon = %s, amphoe = %s, province = %s, location = %s
+                WHERE TRIM(station) = %s
+                '''
+            pg_execute(update_query, (station, river, tambon, amphoe, province, location, station_code))
 
             # 2. ลบข้อมูลน้ำและดินเดิม
-            cur.execute('DELETE FROM water_data WHERE TRIM("สถานี") = ?', (station_code,))
-            cur.execute('DELETE FROM soil_data WHERE TRIM("สถานี") = ?', (station_code,))
+            pg_execute('DELETE FROM water_data WHERE TRIM(station) = %s', (station_code,))
+            pg_execute('DELETE FROM soil_data WHERE TRIM(station) = %s', (station_code,))
 
             # 3. รับพารามิเตอร์ใหม่
             parameters = request.form.getlist('parameter[]')
             units = request.form.getlist('unit[]')
             soil_params = request.form.getlist('soil_parameter[]') 
 
-            # 4. บันทึกข้อมูลน้ำ — ตรวจสอบจำนวนคอลัมน์จริง
+            # 4. บันทึกข้อมูลน้ำ
             water_check_count = int(request.form.get('water_check_count', 14))
             for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
@@ -512,12 +493,14 @@ def edit_station(station_code):
                                 numeric_value = 0.0 if value.startswith('<') else float(value)
                             except ValueError:
                                 pass
-                    cur.execute('''
-                        INSERT INTO water_data ("สถานี", "\ufeffสิ่งที่ตรวจ", "หน่วย", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        ''', (station, param, unit, f'ครั้งที่ {i}', value, numeric_value))
+                        # บันทึกข้อมูลน้ำ
+                        insert_water = '''
+                            INSERT INTO water_data (station, parameter, unit, check_number, value, numeric_value)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        '''
+                        pg_execute(insert_water, (station, param, unit, f'ครั้งที่ {i}', value, numeric_value))
 
-            # 5. บันทึกข้อมูลดิน — ตรวจสอบจำนวนคอลัมน์จริง
+            # 5. บันทึกข้อมูลดิน
             soil_check_count = int(request.form.get('soil_check_count', 8))
             for i in range(1, soil_check_count + 1):
                 soil_check_values = request.form.getlist(f'soil_check{i}[]')
@@ -530,85 +513,79 @@ def edit_station(station_code):
                                 numeric_value = 0.0 if value.startswith('<') else float(value)
                             except ValueError:
                                 pass
-                        cur.execute('''
-                            INSERT INTO soil_data ("สถานี", "สารที่ตรวจ", "ครั้งที่ตรวจ", "ค่าที่ได้", "ค่าที่วัดได้")
-                            VALUES (?, ?, ?, ?, ?)
-                            ''', (station, param, f'ครั้งที่ {i}', value, numeric_value))
-            conn.commit()
-            conn.close()
+                        # บันทึกข้อมูลดิน
+                        insert_soil = '''
+                            INSERT INTO soil_data (station, parameter, check_number, value, numeric_value)
+                            VALUES (%s, %s, %s, %s, %s)
+                        '''
+                        pg_execute(insert_soil, (station, param, f'ครั้งที่ {i}', value, numeric_value))
+
             return jsonify({'success': True})
 
         except Exception as e:
             print("Error updating station:", str(e))
             return jsonify({'success': False, 'message': str(e)})
 
-    # GET: ดึงข้อมูลเดิมมา pre-fill
+        # GET: ดึงข้อมูลเดิมมา pre-fill
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-
-        station_row = conn.execute('''
-            SELECT "\ufeffแม่น้ำ" as river, "สถานี" as station, "บริเวณที่เก็บ" as location,
-                   "ตำบล" as tambon, "อำเภอ" as amphoe, "จังหวัด" as province
-            FROM station_data WHERE TRIM("สถานี") = ?
-        ''', (station_code.strip(),)).fetchone()
-
-        if not station_row:
+        # ดึงข้อมูลสถานี
+        station_query = '''
+            SELECT river, station, location, tambon, amphoe, province
+            FROM station_data WHERE TRIM(station) = %s
+        '''
+        station_rows = pg_execute(station_query, (station_code.strip(),), fetch=True)
+        if not station_rows:
             return "ไม่พบสถานี", 404
+        station_data = dict(station_rows[0])
 
-        station_data = dict(station_row)
+        # ดึงข้อมูลน้ำ
+        water_query = '''
+            SELECT parameter, unit, check_number, value
+            FROM water_data WHERE TRIM(station) = %s
+        '''
+        water_rows = pg_execute(water_query, (station_code.strip(),), fetch=True)
 
-        water_rows = conn.execute('''
-            SELECT "\ufeffสิ่งที่ตรวจ" as parameter, "หน่วย" as unit, "ครั้งที่ตรวจ" as check_number, "ค่าที่ได้" as value
-            FROM water_data WHERE TRIM("สถานี") = ?
-            ORDER BY CAST(SUBSTR("ครั้งที่ตรวจ", 6) AS INTEGER)
-        ''', (station_code.strip(),)).fetchall()
+        # ดึงข้อมูลดิน
+        soil_query = '''
+            SELECT parameter, check_number, value
+            FROM soil_data WHERE TRIM(station) = %s
+        '''
+        soil_rows = pg_execute(soil_query, (station_code.strip(),), fetch=True)
 
-        soil_rows = conn.execute('''
-            SELECT "สารที่ตรวจ" as parameter, "ครั้งที่ตรวจ" as check_number, "ค่าที่ได้" as value
-            FROM soil_data WHERE TRIM("สถานี") = ?
-            ORDER BY CAST(SUBSTR("ครั้งที่ตรวจ", 6) AS INTEGER)
-        ''', (station_code.strip(),)).fetchall()
-
-        conn.close()
-
+        # จัดเรียงข้อมูลน้ำ
         water_data = {}
         for row in water_rows:
             param = row['parameter']
             if param not in water_data:
                 water_data[param] = {'unit': row['unit'], 'checks': {}}
-            check_num = int(row['check_number'].replace('ครั้งที่', '').strip())
-            water_data[param]['checks'][check_num] = row['value']
+            try:
+                check_num = int(row['check_number'].replace('ครั้งที่', '').strip())
+                water_data[param]['checks'][check_num] = row['value']
+            except:
+                water_data[param]['checks'][row['check_number']] = row['value']
 
+        # จัดเรียงข้อมูลดิน
         soil_data = {}
         for row in soil_rows:
             param = row['parameter']
             if param not in soil_data:
                 soil_data[param] = {'checks': {}}
-            check_num = int(row['check_number'].replace('ครั้งที่', '').strip())
-            soil_data[param]['checks'][check_num] = row['value']
-            pass
+            try:
+                check_num = int(row['check_number'].replace('ครั้งที่', '').strip())
+                soil_data[param]['checks'][check_num] = row['value']
+            except:
+                soil_data[param]['checks'][row['check_number']] = row['value']
 
         # คำนวณจำนวนครั้งสูงสุด
-        water_check_count = 0
-        if water_data:
-            first_param = next(iter(water_data.values()))
-            water_check_count = len(first_param['checks'])
-
-        soil_check_count = 0
-        if soil_data:
-            first_param = next(iter(soil_data.values()))
-            soil_check_count = len(first_param['checks'])
-
-        conn.close()  # ปิด connection ครั้งเดียวที่นี่
+        water_check_count = max((max(d['checks'].keys()) for d in water_data.values()), default=14) if water_data else 14
+        soil_check_count = max((max(d['checks'].keys()) for d in soil_data.values()), default=8) if soil_data else 8
 
         return render_template('edit_station.html',
                              station=station_data,
                              water_data=water_data,
                              soil_data=soil_data,
-                             water_check_count=water_check_count or 14,
-                             soil_check_count=soil_check_count or 8)
-                             
+                             water_check_count=water_check_count,
+                             soil_check_count=soil_check_count)
 
     except Exception as e:
         return f"Error loading edit form: {str(e)}", 500
