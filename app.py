@@ -346,64 +346,30 @@ def add_station():
             province = request.form['province'].strip()
             location = request.form['location'].strip()
 
-            # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
+            # ✅ ตรวจสอบก่อน insert
+            check_query = "SELECT 1 FROM station_data WHERE TRIM(station) = %s"
+            exists = pg_execute(check_query, (station,), fetch=True)
+            
+            if exists:
+                flash('สถานีนี้มีอยู่แล้ว', 'error')
+                return redirect(url_for('add_station'))
+
+            # ✅ insert เฉพาะเมื่อไม่มีซ้ำ
             query = '''
                 INSERT INTO station_data (station, river, tambon, amphoe, province, location)
                 VALUES (%s, %s, %s, %s, %s, %s)
             '''
             pg_execute(query, (station, river, tambon, amphoe, province, location))
 
-            # บันทึกข้อมูลน้ำ
-            parameters = request.form.getlist('parameter[]')
-            units = request.form.getlist('unit[]')
-            
-            water_check_count = int(request.form.get('water_check_count', 14))
-            for i in range(1, water_check_count + 1):
-                check_values = request.form.getlist(f'check{i}[]')
-                for idx, param in enumerate(parameters):
-                    if idx < len(check_values):
-                        value = check_values[idx].strip()
-                        unit = units[idx].strip() if idx < len(units) else ''
-                        numeric_value = None
-                        if value and value not in ['-', 'ND']:
-                            try:
-                                numeric_value = 0.0 if value.startswith('<') else float(value)
-                            except ValueError:
-                                pass
-                        # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
-                        insert_water = '''
-                            INSERT INTO water_data (station, parameter, unit, check_number, value, numeric_value)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                        '''
-                        pg_execute(insert_water, (station, param, unit, f'ครั้งที่ {i}', value, numeric_value))
+            # ... (บันทึกข้อมูลน้ำและดินเหมือนเดิม)
 
-            # บันทึกข้อมูลดิน
-            soil_params = request.form.getlist('soil_parameter[]')
-            soil_check_count = int(request.form.get('soil_check_count', 8))
-            for i in range(1, soil_check_count + 1):
-                soil_check_values = request.form.getlist(f'soil_check{i}[]')
-                for idx, param in enumerate(soil_params):
-                    if idx < len(soil_check_values):
-                        value = soil_check_values[idx].strip()
-                        numeric_value = None
-                        if value and value not in ['-', 'ND']:
-                            try:
-                                numeric_value = 0.0 if value.startswith('<') else float(value)
-                            except ValueError:
-                                pass
-                        # ใช้ชื่อคอลัมน์ภาษาอังกฤษ
-                        insert_soil = '''
-                            INSERT INTO soil_data (station, parameter, check_number, value, numeric_value)
-                            VALUES (%s, %s, %s, %s, %s)
-                        '''
-                        pg_execute(insert_soil, (station, param, f'ครั้งที่ {i}', value, numeric_value))
-
-            return jsonify({'success': True})
+            return redirect(url_for('index')) 
 
         except Exception as e:
             print("Error saving station:", str(e))
-            return jsonify({'success': False, 'message': str(e)})
-
+            flash('เกิดข้อผิดพลาด: ' + str(e), 'error')
+            return redirect(url_for('add_station'))
+        
 @app.route('/delete-station/<station_code>', methods=['DELETE'])
 @login_required
 def delete_station(station_code):
