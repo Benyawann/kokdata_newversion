@@ -300,16 +300,23 @@
 function deleteStation(stationCode) {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสถานี "${stationCode}"?`)) {
         fetch(`/delete-station/${stationCode}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 alert('✅ ลบสถานีเรียบร้อยแล้ว');
-                window.location.href = '/';
+                window.location.href = '/';  // ← สำคัญ! redirect ไปหน้า index
             } else {
                 alert('❌ เกิดข้อผิดพลาด: ' + data.message);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ เกิดข้อผิดพลาดในการลบ');
         });
     }
 }
