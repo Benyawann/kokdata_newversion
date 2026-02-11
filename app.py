@@ -556,6 +556,11 @@ def edit_station(station_code):
     except Exception as e:
         return f"Error loading edit form: {str(e)}", 500
     
+@app.route('/migrate')
+def migrate():
+    # รันสคริปต์ migrate ที่นี่
+    return "Migrated!"
+    
 if __name__ == '__main__':
     # Get port from environment variable or use default
     port = int(os.environ.get('PORT', 8080))
