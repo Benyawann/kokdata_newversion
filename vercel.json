@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "api/edit_station.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/edit-station/(.*)",
+      "dest": "api/edit_station.py"
+    }
+  ]
+}
