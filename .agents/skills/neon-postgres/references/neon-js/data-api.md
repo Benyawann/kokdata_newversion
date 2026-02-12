@@ -43,6 +43,7 @@ const client = createClient<Database>({
 });
 ```
 
+
 ---
 
 ## Query Patterns

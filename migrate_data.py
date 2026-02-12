@@ -7,7 +7,7 @@ print("File exists:", os.path.exists('kok_data.db'))
 print("File size:", os.path.getsize('kok_data.db'), "bytes")
 sqlite_conn = sqlite3.connect('kok_data.db')
 pg_conn = psycopg2.connect(
-    host='127.0.0.1',
+    host='localhost',
     port=5432,
     database='postgres',
     user='postgres',
