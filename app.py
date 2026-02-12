@@ -58,6 +58,37 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.route('/debug-branch')
+def debug_branch():
+    """ตรวจสอบ Branch ที่เชื่อมต่อ"""
+    try:
+        conn = get_pg_connection()
+        cur = conn.cursor()
+        
+        # ตรวจสอบ Branch ที่ใช้
+        cur.execute("SELECT current_database()")
+        branch = cur.fetchone()[0]
+        
+        # ตรวจสอบว่ามีตาราง station_data หรือไม่
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1 
+                FROM information_schema.tables 
+                WHERE table_name = 'station_data'
+            )
+        """)
+        has_table = cur.fetchone()[0]
+        
+        conn.close()
+        
+        return {
+            'connected_branch': branch,
+            'has_station_data': has_table,
+            'database_url_sample': os.environ.get('DATABASE_URL', '')[:50] + '...'
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
 # === หน้าล็อกอิน ===
 @app.route('/login', methods=['GET', 'POST'])
 def login():
