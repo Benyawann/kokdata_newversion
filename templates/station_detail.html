@@ -315,7 +315,7 @@
 <script>
 function deleteStation(stationCode) {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสถานี "${stationCode}"?`)) {
-        fetch(`/delete-station/${stationCode}`, {
+        fetch(`/api/delete-station/${encodeURIComponent(stationCode)}`, {
             method: 'DELETE'
         })
         .then(response => response.json())
@@ -326,9 +326,14 @@ function deleteStation(stationCode) {
             } else {
                 alert('❌ เกิดข้อผิดพลาด: ' + data.message);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         });
     }
 }
+
 </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
