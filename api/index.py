@@ -11,6 +11,7 @@ env = Environment(loader=FileSystemLoader(template_dir))
 
 # เชื่อมต่อฐานข้อมูล
 def get_db():
+    # บน Vercel ใช้ path ที่เขียนได้
     db_path = os.path.join(os.path.dirname(__file__), '..', 'kok_data.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -34,14 +35,16 @@ def init_db():
         check6 TEXT, check7 TEXT, check8 TEXT, check9 TEXT, check10 TEXT,
         check11 TEXT, check12 TEXT, check13 TEXT, check14 TEXT,
         check15 TEXT, check16 TEXT, check17 TEXT, check18 TEXT,
-        check19 TEXT, check20 TEXT
+        check19 TEXT, check20 TEXT,
+        FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE CASCADE
     )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS soil_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         station_id INTEGER, parameter TEXT,
         check1 TEXT, check2 TEXT, check3 TEXT, check4 TEXT, check5 TEXT,
-        check6 TEXT, check7 TEXT, check8 TEXT, check9 TEXT, check10 TEXT
+        check6 TEXT, check7 TEXT, check8 TEXT, check9 TEXT, check10 TEXT,
+        FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE CASCADE
     )''')
     
     conn.commit()
@@ -56,6 +59,9 @@ def prepare_water_data(water_rows):
     for i in range(1, 21):
         if any(row[f'check{i}'] for row in water_rows):
             check_numbers.append(i)
+    
+    if not check_numbers:
+        check_numbers = list(range(1, 15))  # ค่าเริ่มต้น
     
     pivot_list = []
     for row in water_rows:
@@ -82,7 +88,7 @@ def prepare_water_data(water_rows):
         'pivot': True,
         'check_numbers': check_numbers,
         'pivot_list': pivot_list,
-        'pivot_list_filtered': pivot_list  # สำหรับกราฟ
+        'pivot_list_filtered': pivot_list
     }
 
 def prepare_soil_data(soil_rows):
@@ -93,6 +99,9 @@ def prepare_soil_data(soil_rows):
     for i in range(1, 11):
         if any(row[f'check{i}'] for row in soil_rows):
             check_numbers.append(i)
+    
+    if not check_numbers:
+        check_numbers = list(range(1, 9))  # ค่าเริ่มต้น
     
     pivot_list = []
     for row in soil_rows:
@@ -118,7 +127,7 @@ def prepare_soil_data(soil_rows):
         'pivot': True,
         'check_numbers': check_numbers,
         'pivot_list': pivot_list,
-        'pivot_list_filtered': pivot_list  # สำหรับกราฟ
+        'pivot_list_filtered': pivot_list
     }
 
 # Handler หลัก
@@ -185,7 +194,7 @@ def handler(req):
             'body': html
         }
     
-    # Route: เพิ่มสถานี (GET = แสดงฟอร์ม, POST = บันทึก)
+    # Route: เพิ่มสถานี
     elif path == '/add-station' or path == '/add-station.html':
         if req.method == 'GET':
             template = env.get_template('add-station.html')
@@ -193,54 +202,59 @@ def handler(req):
             return {'statusCode': 200, 'headers': {'Content-Type': 'text/html'}, 'body': html}
         
         elif req.method == 'POST':
-            content_length = int(req.headers.get('Content-Length', 0))
-            body = req.body.read(content_length).decode('utf-8')
-            data = json.loads(body) if body else {}
-            
-            conn = get_db()
-            c = conn.cursor()
-            c.execute('''INSERT INTO stations (station, river, tambon, amphoe, province, location)
-                        VALUES (?, ?, ?, ?, ?, ?)''',
-                     (data.get('station'), data.get('river'), data.get('tambon'),
-                      data.get('amphoe'), data.get('province'), data.get('location')))
-            station_id = c.lastrowid
-            
-            # บันทึกข้อมูลน้ำ
-            for item in data.get('waterData', []):
-                c.execute('''INSERT INTO water_data 
-                            (station_id, parameter, unit, check1, check2, check3, check4, check5,
-                            check6, check7, check8, check9, check10, check11, check12, check13, check14,
-                            check15, check16, check17, check18, check19, check20)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                         (station_id, item['parameter'], item.get('unit', ''),
-                          item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
-                          item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
-                          item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
-                          item.get('check10', ''), item.get('check11', ''), item.get('check12', ''),
-                          item.get('check13', ''), item.get('check14', ''), item.get('check15', ''),
-                          item.get('check16', ''), item.get('check17', ''), item.get('check18', ''),
-                          item.get('check19', ''), item.get('check20', '')))
-            
-            # บันทึกข้อมูลดิน
-            for item in data.get('soilData', []):
-                c.execute('''INSERT INTO soil_data 
-                            (station_id, parameter, check1, check2, check3, check4, check5,
-                            check6, check7, check8, check9, check10)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                         (station_id, item['parameter'],
-                          item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
-                          item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
-                          item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
-                          item.get('check10', '')))
-            
-            conn.commit()
-            conn.close()
-            
-            return {
-                'statusCode': 302,
-                'headers': {'Location': '/'},
-                'body': ''
-            }
+            try:
+                content_length = int(req.headers.get('Content-Length', 0))
+                body = req.body.read(content_length).decode('utf-8')
+                data = json.loads(body) if body else {}
+                
+                conn = get_db()
+                c = conn.cursor()
+                c.execute('''INSERT INTO stations (station, river, tambon, amphoe, province, location)
+                            VALUES (?, ?, ?, ?, ?, ?)''',
+                         (data.get('station'), data.get('river'), data.get('tambon'),
+                          data.get('amphoe'), data.get('province'), data.get('location')))
+                station_id = c.lastrowid
+                
+                for item in data.get('waterData', []):
+                    c.execute('''INSERT INTO water_data 
+                                (station_id, parameter, unit, check1, check2, check3, check4, check5,
+                                check6, check7, check8, check9, check10, check11, check12, check13, check14,
+                                check15, check16, check17, check18, check19, check20)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (station_id, item['parameter'], item.get('unit', ''),
+                              item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
+                              item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
+                              item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
+                              item.get('check10', ''), item.get('check11', ''), item.get('check12', ''),
+                              item.get('check13', ''), item.get('check14', ''), item.get('check15', ''),
+                              item.get('check16', ''), item.get('check17', ''), item.get('check18', ''),
+                              item.get('check19', ''), item.get('check20', '')))
+                
+                for item in data.get('soilData', []):
+                    c.execute('''INSERT INTO soil_data 
+                                (station_id, parameter, check1, check2, check3, check4, check5,
+                                check6, check7, check8, check9, check10)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (station_id, item['parameter'],
+                              item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
+                              item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
+                              item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
+                              item.get('check10', '')))
+                
+                conn.commit()
+                conn.close()
+                
+                return {
+                    'statusCode': 302,
+                    'headers': {'Location': '/'},
+                    'body': ''
+                }
+            except Exception as e:
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'success': False, 'message': str(e)})
+                }
     
     # Route: แก้ไขสถานี
     elif path == '/edit-station' or path == '/edit-station.html':
@@ -274,64 +288,76 @@ def handler(req):
             )
             return {'statusCode': 200, 'headers': {'Content-Type': 'text/html'}, 'body': html}
         
-        elif req.method == 'PUT' and station_id:
-            content_length = int(req.headers.get('Content-Length', 0))
-            body = req.body.read(content_length).decode('utf-8')
-            data = json.loads(body) if body else {}
-            
+        elif req.method in ['POST', 'PUT'] and station_id:
+            try:
+                content_length = int(req.headers.get('Content-Length', 0))
+                body = req.body.read(content_length).decode('utf-8')
+                data = json.loads(body) if body else {}
+                
+                conn = get_db()
+                c = conn.cursor()
+                c.execute('''UPDATE stations SET station=?, river=?, tambon=?, amphoe=?, province=?, location=?
+                            WHERE id=?''',
+                         (data['station'], data['river'], data['tambon'], 
+                          data['amphoe'], data['province'], data['location'], station_id))
+                
+                c.execute('DELETE FROM water_data WHERE station_id = ?', (station_id,))
+                c.execute('DELETE FROM soil_data WHERE station_id = ?', (station_id,))
+                
+                for item in data.get('waterData', []):
+                    c.execute('''INSERT INTO water_data 
+                                (station_id, parameter, unit, check1, check2, check3, check4, check5,
+                                check6, check7, check8, check9, check10, check11, check12, check13, check14,
+                                check15, check16, check17, check18, check19, check20)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (station_id, item['parameter'], item.get('unit', ''),
+                              item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
+                              item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
+                              item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
+                              item.get('check10', ''), item.get('check11', ''), item.get('check12', ''),
+                              item.get('check13', ''), item.get('check14', ''), item.get('check15', ''),
+                              item.get('check16', ''), item.get('check17', ''), item.get('check18', ''),
+                              item.get('check19', ''), item.get('check20', '')))
+                
+                for item in data.get('soilData', []):
+                    c.execute('''INSERT INTO soil_data 
+                                (station_id, parameter, check1, check2, check3, check4, check5,
+                                check6, check7, check8, check9, check10)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                             (station_id, item['parameter'],
+                              item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
+                              item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
+                              item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
+                              item.get('check10', '')))
+                
+                conn.commit()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'success': True})
+                }
+            except Exception as e:
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'success': False, 'message': str(e)})
+                }
+    
+    # Route: ลบสถานี (รองรับทั้ง 2 รูปแบบ)
+    elif path.startswith('/delete-station/') or (path.startswith('/api/stations') and req.method == 'DELETE'):
+        if path.startswith('/delete-station/'):
+            station_code = path.replace('/delete-station/', '')
             conn = get_db()
             c = conn.cursor()
-            c.execute('''UPDATE stations SET station=?, river=?, tambon=?, amphoe=?, province=?, location=?
-                        WHERE id=?''',
-                     (data['station'], data['river'], data['tambon'], 
-                      data['amphoe'], data['province'], data['location'], station_id))
-            
-            c.execute('DELETE FROM water_data WHERE station_id = ?', (station_id,))
-            c.execute('DELETE FROM soil_data WHERE station_id = ?', (station_id,))
-            
-            for item in data.get('waterData', []):
-                c.execute('''INSERT INTO water_data 
-                            (station_id, parameter, unit, check1, check2, check3, check4, check5,
-                            check6, check7, check8, check9, check10, check11, check12, check13, check14,
-                            check15, check16, check17, check18, check19, check20)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                         (station_id, item['parameter'], item.get('unit', ''),
-                          item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
-                          item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
-                          item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
-                          item.get('check10', ''), item.get('check11', ''), item.get('check12', ''),
-                          item.get('check13', ''), item.get('check14', ''), item.get('check15', ''),
-                          item.get('check16', ''), item.get('check17', ''), item.get('check18', ''),
-                          item.get('check19', ''), item.get('check20', '')))
-            
-            for item in data.get('soilData', []):
-                c.execute('''INSERT INTO soil_data 
-                            (station_id, parameter, check1, check2, check3, check4, check5,
-                            check6, check7, check8, check9, check10)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                         (station_id, item['parameter'],
-                          item.get('check1', ''), item.get('check2', ''), item.get('check3', ''),
-                          item.get('check4', ''), item.get('check5', ''), item.get('check6', ''),
-                          item.get('check7', ''), item.get('check8', ''), item.get('check9', ''),
-                          item.get('check10', '')))
-            
-            conn.commit()
-            conn.close()
-            
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'success': True})
-            }
-    
-    # Route: ลบสถานี
-    elif path.startswith('/delete-station/'):
-        station_code = path.replace('/delete-station/', '')
-        
-        conn = get_db()
-        c = conn.cursor()
-        c.execute('SELECT id FROM stations WHERE station = ?', (station_code,))
-        station = c.fetchone()
+            c.execute('SELECT id FROM stations WHERE station = ?', (station_code,))
+            station = c.fetchone()
+        else:
+            station_id = query.get('id', [None])[0]
+            conn = get_db()
+            c = conn.cursor()
+            station = {'id': station_id} if station_id else None
         
         if station:
             station_id = station['id']
@@ -342,27 +368,35 @@ def handler(req):
         
         conn.close()
         
-        return {
-            'statusCode': 302,
-            'headers': {'Location': '/'},
-            'body': ''
-        }
+        if path.startswith('/api/'):
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'success': True})
+            }
+        else:
+            return {
+                'statusCode': 302,
+                'headers': {'Location': '/'},
+                'body': ''
+            }
     
-    # API Endpoint (สำหรับ JavaScript)
+    # API Endpoint
     elif path.startswith('/api/'):
         return handle_api(req, path, query)
     
-    # Static Files
+    # Static Files - ให้ Vercel จัดการเอง (return 404 เพื่อให้ Vercel serve)
     elif path.startswith('/static/'):
         return {'statusCode': 404, 'headers': {'Content-Type': 'text/html'}, 'body': 'Not Found'}
     
     else:
-        return {'statusCode': 404, 'headers': {'Content-Type': 'text/html'}, 'body': 'Not Found'}
+        return {'statusCode': 404, 'headers': {'Content-Type': 'text/html'}, 'body': 'ไม่พบหน้าเว็บ'}
 
 def handle_api(req, path, query):
     headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     }
     
@@ -380,13 +414,15 @@ def handle_api(req, path, query):
                 c.execute('SELECT * FROM stations WHERE id = ?', (station_id,))
                 station = c.fetchone()
                 if not station:
-                    return {'statusCode': 404, 'headers': headers, 'body': json.dumps({'success': False})}
+                    conn.close()
+                    return {'statusCode': 404, 'headers': headers, 'body': json.dumps({'success': False, 'message': 'ไม่พบสถานี'})}
                 
                 station = dict(station)
                 c.execute('SELECT * FROM water_data WHERE station_id = ?', (station_id,))
                 water = [dict(row) for row in c.fetchall()]
                 c.execute('SELECT * FROM soil_data WHERE station_id = ?', (station_id,))
                 soil = [dict(row) for row in c.fetchall()]
+                conn.close()
                 
                 return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
                     'success': True,
@@ -395,6 +431,7 @@ def handle_api(req, path, query):
             else:
                 c.execute('SELECT * FROM stations ORDER BY id DESC')
                 stations = [dict(row) for row in c.fetchall()]
+                conn.close()
                 return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
                     'success': True,
                     'data': stations
@@ -405,10 +442,11 @@ def handle_api(req, path, query):
             c.execute('DELETE FROM soil_data WHERE station_id = ?', (station_id,))
             c.execute('DELETE FROM stations WHERE id = ?', (station_id,))
             conn.commit()
-            return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True})}
+            conn.close()
+            return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True, 'message': 'ลบข้อมูลเรียบร้อย'})}
     
     conn.close()
-    return {'statusCode': 405, 'headers': headers, 'body': json.dumps({'message': 'Method not allowed'})}
+    return {'statusCode': 405, 'headers': headers, 'body': json.dumps({'success': False, 'message': 'Method not allowed'})}
 
 # Vercel Python Runtime Entry Point
 def main(req):
