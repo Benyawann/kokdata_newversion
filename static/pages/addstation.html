@@ -95,141 +95,193 @@
     const SOIL_CHECK_COUNT = 8;
 
     function createRow(type, checkCount, isFirstRow = false) {
-    const row = document.createElement('tr');
-    const isSoil = (type === 'soil');
+        const row = document.createElement('tr');
+        const isSoil = (type === 'soil');
 
-    // สิ่งที่ตรวจ / สารที่ตรวจ
-    const paramCell = document.createElement('td');
-    const paramInput = document.createElement('input');
-    paramInput.type = 'text';
-    paramInput.name = isSoil ? 'soil_parameter[]' : 'parameter[]';
-    paramInput.placeholder = isSoil ? 'เช่น ตะกั่ว, แคดเมียม' : 'เช่น ความขุ่น, DO';
-    paramInput.required = true;
-    paramCell.appendChild(paramInput);
-    row.appendChild(paramCell);
+        // 1. พารามิเตอร์ (สิ่งที่ตรวจ)
+        const paramCell = document.createElement('td');
+        const paramInput = document.createElement('input');
+        paramInput.type = 'text';
+        paramInput.className = 'param-input'; // เพิ่ม class เพื่อให้ง่ายต่อการดึงค่า later
+        paramInput.placeholder = isSoil ? 'เช่น ตะกั่ว' : 'เช่น ความขุ่น';
+        paramInput.required = true;
+        paramCell.appendChild(paramInput);
+        row.appendChild(paramCell);
 
-    // ช่องครั้งที่ 1 ถึง checkCount
-    for (let i = 1; i <= checkCount; i++) {
-        const cell = document.createElement('td');
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;
-        cell.appendChild(input);
-        row.appendChild(cell);
+        // 2. ช่องครั้งที่ 1 ถึง checkCount
+        for (let i = 1; i <= checkCount; i++) {
+            const cell = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = `check-input-${i}`; // เพิ่ม class แยกตามครั้งที่
+            cell.appendChild(input);
+            row.appendChild(cell);
+        }
+
+        // 3. หน่วย (เฉพาะน้ำเท่านั้น)
+        if (!isSoil) {
+            const unitCell = document.createElement('td');
+            const unitInput = document.createElement('input');
+            unitInput.type = 'text';
+            unitInput.className = 'unit-input';
+            unitInput.placeholder = 'mg/L';
+            unitInput.required = true;
+            unitCell.appendChild(unitInput);
+            row.appendChild(unitCell);
+        }
+
+        // 4. ปุ่มลบ
+        const actionCell = document.createElement('td');
+        const trashIcon = document.createElement('img');
+        trashIcon.src = '/static/image/delete.png';
+        trashIcon.alt = 'ลบรายการ';
+        trashIcon.className = 'btn-remove-icon';
+        trashIcon.style.width = '20px';
+        trashIcon.style.cursor = 'pointer';
+
+        if (isFirstRow) {
+            trashIcon.style.opacity = '0.4';
+            trashIcon.style.cursor = 'not-allowed';
+        } else {
+            trashIcon.addEventListener('click', () => {
+                const tbodyId = isSoil ? 'soilTableBody' : 'waterTableBody';
+                const tbody = document.getElementById(tbodyId);
+                if (tbody.rows.length > 1) {
+                    row.remove();
+                } else {
+                    alert(`ต้องมีอย่างน้อย 1 รายการ (${isSoil ? 'ดิน' : 'น้ำ'})`);
+                }
+            });
+        }
+        actionCell.appendChild(trashIcon);
+        row.appendChild(actionCell);
+
+        return row;
     }
-
-    // หน่วย (เฉพาะน้ำเท่านั้น)
-    if (!isSoil) {
-        const unitCell = document.createElement('td');
-        const unitInput = document.createElement('input');
-        unitInput.type = 'text';
-        unitInput.name = 'unit[]';
-        unitInput.placeholder = 'mg/L, NTU';
-        unitInput.required = true;
-        unitCell.appendChild(unitInput);
-        row.appendChild(unitCell);
-    }
-
-    // ไอคอนถังขยะ
-    const actionCell = document.createElement('td');
-    const trashIcon = document.createElement('img');
-    trashIcon.src = '/static/image/delete.png';
-    trashIcon.alt = 'ลบรายการ';
-    trashIcon.className = 'btn-remove-icon';
-    trashIcon.style.width = '20px';
-    trashIcon.style.cursor = 'pointer';
-
-    if (isFirstRow) {
-        trashIcon.style.opacity = '0.4';
-        trashIcon.style.cursor = 'not-allowed';
-    } else {
-        trashIcon.addEventListener('click', () => {
-            const tbodyId = isSoil ? 'soilTableBody' : 'waterTableBody';
-            const tbody = document.getElementById(tbodyId);
-            if (tbody.rows.length > 1) {
-                row.remove();
-            } else {
-                alert(`ต้องมีอย่างน้อย 1 รายการ (${isSoil ? 'ดิน' : 'น้ำ'})`);
-            }
-        });
-    }
-    actionCell.appendChild(trashIcon);
-    row.appendChild(actionCell);
-
-    return row;
-}
 
     function renderTableHeader(tableId, checkCount, firstColumnText, hasUnit = true) {
-    const thead = document.querySelector(`#${tableId} thead tr`);
-    thead.innerHTML = `<th>${firstColumnText}</th>`;
-    for (let i = 1; i <= checkCount; i++) {
-        const th = document.createElement('th');
-        th.textContent = `ครั้งที่ ${i}`;
-        thead.appendChild(th);
+        const thead = document.querySelector(`#${tableId} thead tr`);
+        thead.innerHTML = `<th>${firstColumnText}</th>`;
+        for (let i = 1; i <= checkCount; i++) {
+            const th = document.createElement('th');
+            th.textContent = `ครั้งที่ ${i}`;
+            thead.appendChild(th);
+        }
+        if (hasUnit) {
+            thead.innerHTML += '<th>หน่วย</th>';
+        }
+        thead.innerHTML += '<th></th>'; 
     }
-    if (hasUnit) {
-        thead.innerHTML += '<th>หน่วย</th>';
-    }
-    thead.innerHTML += '<th></th>'; // สำหรับปุ่มลบ
-}
 
     // === เริ่มต้น ===
     document.addEventListener('DOMContentLoaded', () => {
-       // น้ำ (มีหน่วย)
-renderTableHeader('waterTable', WATER_CHECK_COUNT, 'สิ่งที่ตรวจ', true);
-const waterTbody = document.getElementById('waterTableBody');
-waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, true));
-document.getElementById('addWaterRowBtn').addEventListener('click', () => {
-    waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, false));
-});
+        // สร้างหัวตาราง
+        renderTableHeader('waterTable', WATER_CHECK_COUNT, 'สิ่งที่ตรวจ', true);
+        renderTableHeader('soilTable', SOIL_CHECK_COUNT, 'สารที่ตรวจ', false);
 
-// ดิน (ไม่มีหน่วย)
-renderTableHeader('soilTable', SOIL_CHECK_COUNT, 'สารที่ตรวจ', false); // ส่ง false
-const soilTbody = document.getElementById('soilTableBody');
-soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, true));
-document.getElementById('addSoilRowBtn').addEventListener('click', () => {
-    soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, false));
-});
-        // ส่งฟอร์ม
-    document.getElementById('stationForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(document.getElementById('stationForm'));
-    
-        try {
-            const response = await fetch('/add-station', { // URL ถูกต้อง
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert('✅ บันทึกข้อมูลเรียบร้อยแล้ว!');
-                document.getElementById('stationForm').reset();
-                resetTables();
-            } else {
-                alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
-        }
-    });
-
-    function resetTables() {
-        // รีเซ็ตตารางน้ำ
+        // เพิ่มแถวเริ่มต้น
         const waterTbody = document.getElementById('waterTableBody');
-        waterTbody.innerHTML = '';
         waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, true));
 
-        // รีเซ็ตตารางดิน
         const soilTbody = document.getElementById('soilTableBody');
-        soilTbody.innerHTML = '';
         soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, true));
-    }
-    // ปุ่มล้างข้อมูล (รีโหลดหน้า)
-    document.querySelector('.btn-reset').addEventListener('click', function(e) {
-        e.preventDefault(); 
-        location.reload(); // รีโหลดหน้าเว็บใหม่ทั้งหมด
-    });
+
+        // ปุ่มเพิ่มแถว
+        document.getElementById('addWaterRowBtn').addEventListener('click', () => {
+            waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, false));
+        });
+        document.getElementById('addSoilRowBtn').addEventListener('click', () => {
+            soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, false));
+        });
+
+        // === ส่งฟอร์ม (สำคัญ: เปลี่ยนเป็นส่ง JSON) ===
+        document.getElementById('stationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'กำลังบันทึก...';
+
+            // 1. รวบรวมข้อมูลพื้นฐาน
+            const basicData = {
+                station: document.getElementById('station').value,
+                river: document.getElementById('river').value,
+                tambon: document.getElementById('tambon').value,
+                amphoe: document.getElementById('amphoe').value,
+                province: document.getElementById('province').value,
+                location: document.getElementById('location').value,
+            };
+
+            // 2. รวบรวมข้อมูลตารางน้ำ
+            const waterData = [];
+            for (let row of waterTbody.rows) {
+                const param = row.querySelector('.param-input').value;
+                if(param) { // เก็บเฉพาะแถวที่มีการกรอก
+                    const item = {
+                        parameter: param,
+                        unit: row.querySelector('.unit-input').value
+                    };
+                    for(let i=1; i<=WATER_CHECK_COUNT; i++) {
+                        item[`check${i}`] = row.querySelector(`.check-input-${i}`).value;
+                    }
+                    waterData.push(item);
+                }
+            }
+
+            // 3. รวบรวมข้อมูลตารางดิน
+            const soilData = [];
+            for (let row of soilTbody.rows) {
+                const param = row.querySelector('.param-input').value;
+                if(param) {
+                    const item = { parameter: param };
+                    for(let i=1; i<=SOIL_CHECK_COUNT; i++) {
+                        item[`check${i}`] = row.querySelector(`.check-input-${i}`).value;
+                    }
+                    soilData.push(item);
+                }
+            }
+
+            // 4. ส่งข้อมูลไป API
+            try {
+                const response = await fetch('/api/stations', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...basicData,
+                        waterData: waterData,
+                        soilData: soilData
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ บันทึกข้อมูลเรียบร้อยแล้ว!');
+                    document.getElementById('stationForm').reset();
+                    resetTables();
+                } else {
+                    alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+
+        function resetTables() {
+            waterTbody.innerHTML = '';
+            waterTbody.appendChild(createRow('water', WATER_CHECK_COUNT, true));
+            soilTbody.innerHTML = '';
+            soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, true));
+        }
+
+        document.querySelector('.btn-reset').addEventListener('click', function(e) {
+            e.preventDefault(); 
+            location.reload(); 
+        });
     });
     </script>
 </body>
