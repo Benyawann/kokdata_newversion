@@ -14,9 +14,9 @@
         <a href="/" class="back-button">ย้อนกลับ</a>
         {% if session.logged_in %}
         <div class="station-actions">
-             <a href="/edit-station/{{ station.station }}" class="edit-button">
+             <a href="/edit-station.html?id={{ station.id }}" class="edit-button">
                     <img src="/static/image/edit.png" alt="location icon" style="width: 20px;">&nbsp; แก้ไข</a>
-                    <button onclick="deleteStation('{{ station.station }}')" class="delete-button">
+                    <button onclick="deleteStation('{{ station.id }}', '{{ station.station }}')" class="delete-button">
                     <img src="/static/image/delete2.png" alt="location icon" style="width: 20px;">&nbsp; ลบสถานีนี้
             </button>
         </div>
@@ -315,7 +315,7 @@
 <script>
 function deleteStation(stationCode) {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสถานี "${stationCode}"?`)) {
-        fetch(`/delete-station/${stationCode}`, {
+        fetch(`/api/delete-station/${encodeURIComponent(stationCode)}`, {
             method: 'DELETE'
         })
         .then(response => response.json())
@@ -326,9 +326,14 @@ function deleteStation(stationCode) {
             } else {
                 alert('❌ เกิดข้อผิดพลาด: ' + data.message);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         });
     }
 }
+
 </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -975,6 +980,27 @@ function deleteStation(stationCode) {
             });
         }
     }
+    async function deleteStation(id, name) {
+    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสถานี "${name}"?`)) {
+        try {
+            const response = await fetch(`/api/stations?id=${id}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('✅ ลบสถานีเรียบร้อยแล้ว');
+                window.location.href = '/'; // กลับหน้าหลัก ข้อมูลจะหายไปเพราะถูกลบจาก DB แล้ว
+            } else {
+                alert('❌ เกิดข้อผิดพลาด: ' + result.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+        }
+    }
+}
     </script>
 </body>
 </html>
+
