@@ -100,7 +100,7 @@
                         {% set is_valid_number = true %}
                     {% endif %}
                     <!-- กำหนดค่ามาตรฐานสำหรับน้ำ -->
-                        {% set standard_limit = none %}
+                    {% set standard_limit = none %}
                     {% if row.parameter == 'สารหนู' %}
                         {% set standard_limit = 0.01 %}
                     {% elif row.parameter == 'แมงกานีส' %}
@@ -217,7 +217,7 @@
         {% set is_valid_number = true %}
     {% endif %}
     <!-- กำหนดค่า limit ตามสาร -->
-        {% set unsafe_limit = none %}
+    {% set unsafe_limit = none %}
     {% if row.parameter == 'สารหนู' %}
         {% set unsafe_limit = 33 %}
     {% elif row.parameter == 'แคดเมียม' %}

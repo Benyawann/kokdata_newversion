@@ -4,21 +4,33 @@
 Flask web application to display station list
 """
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import sys  # ✅ เพิ่มสำหรับการตรวจสอบข้อผิดพลาด
 
-# การตั้งค่า PostgreSQL
-PG_CONFIG = {
-    'host': os.environ.get('PG_HOST', 'localhost'),
-    'port': os.environ.get('PG_PORT', 5432),
-    'database': os.environ.get('PG_DATABASE', 'postgres'),
-    'user': os.environ.get('PG_USER', 'postgres'),
-    'password': os.environ.get('PG_PASSWORD', 'password123')
-}
+# ✅ นำเข้า psycopg2 ก่อนการใช้งานทั้งหมด
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ImportError as e:
+    print(f"❌ ข้อผิดพลาด: ไม่พบ psycopg2 - {e}", file=sys.stderr)
+    print("💡 ติดตั้งด้วยคำสั่ง: pip install psycopg2-binary", file=sys.stderr)
+    sys.exit(1)
+
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
+import secrets
 
 def get_pg_connection():
-    """สร้างการเชื่อมต่อกับ PostgreSQL"""
-    return psycopg2.connect(**PG_CONFIG)
+    """เชื่อมต่อฐานข้อมูลผ่าน DATABASE_URL เท่านั้น"""
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if not database_url:
+        raise Exception("❌ ไม่พบ DATABASE_URL - ตั้งค่าด้วย fly secrets set")
+    
+    # แปลง postgres:// เป็น postgresql://
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    
+    print(f"✅ เชื่อมต่อฐานข้อมูลด้วย DATABASE_URL (ซ่อนรหัส)")
+    return psycopg2.connect(database_url)
 
 def pg_execute(query, params=None, fetch=False):
     """รันคำสั่ง SQL กับ PostgreSQL"""
@@ -37,11 +49,8 @@ def pg_execute(query, params=None, fetch=False):
     except Exception as e:
         conn.rollback()
         conn.close()
+        print(f"❌ SQL Error: {e}", file=sys.stderr)
         raise e
-    
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
-import os
-import secrets
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16)  # จำเป็นสำหรับ session
@@ -133,6 +142,7 @@ def get_stations():
             amphoe,
             province
         FROM station_data
+        ORDER BY id ASC
     """
     rows = pg_execute(query, fetch=True)
     
@@ -230,33 +240,38 @@ def get_station_by_code(station_code):
     return None
 
 def get_water_data(station_code):
-    print(f"🔍 กำลังค้นหา water_data สำหรับ station: '{station_code}'")
-    query = """
-        SELECT 
-            parameter,
-            location,
-            check_number,
-            value,
-            numeric_value,
-            unit
-        FROM water_data
-        WHERE TRIM(station) = TRIM(%s)
-    """
-    rows = pg_execute(query, (station_code.strip(),), fetch=True)
-    print(f"✅ พบ {len(rows)} แถว")
+    station_code_clean = station_code.strip()
+    print(f"🔍 get_water_data: ค่า station_code_clean = '{station_code_clean}'")
     
-    # Organize data as pivot table
+    query = """
+        SELECT parameter, location, check_number, value, numeric_value, unit
+        FROM water_data
+        WHERE LOWER(TRIM(station)) = LOWER(%s)
+    """
+    rows = pg_execute(query, (station_code_clean,), fetch=True)
+    print(f"✅ ดึงได้ {len(rows)} แถว จาก water_data")
+
+    if not rows:
+        return {
+            'pivot_list_filtered': [],
+            'check_numbers': [],
+            'units': {},
+            'parameters': []
+        }
+    
+    # ประกาศตัวแปร
     pivot_data = {}
     numeric_data = {}
     check_numbers = []
     unit_info = {}
     
     for row in rows:
-        param = row['parameter']
-        check_num = row['check_number']
-        value = row['value']
+        # ✅ ตรวจสอบ None ก่อนใช้งาน
+        param = row['parameter'] if row['parameter'] is not None else 'ไม่ระบุ'
+        check_num = row['check_number'] if row['check_number'] is not None else 'ไม่ระบุ'
+        value = row['value'] if row['value'] is not None else ''
         numeric_value = row.get('numeric_value', 0) if row.get('numeric_value') is not None else 0
-        unit = row['unit']
+        unit = row['unit'] if row['unit'] is not None else ''
         
         if param not in pivot_data:
             pivot_data[param] = {}
@@ -264,12 +279,20 @@ def get_water_data(station_code):
             unit_info[param] = unit
         
         try:
-            check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
-            if check_num_int not in check_numbers:
-                check_numbers.append(check_num_int)
-            pivot_data[param][check_num_int] = value
-            numeric_data[param][check_num_int] = numeric_value
-        except (ValueError, IndexError):
+            # ✅ ตรวจสอบ check_num ก่อนแปลง
+            if isinstance(check_num, str) and 'ครั้งที่' in check_num:
+                check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
+                if check_num_int not in check_numbers:
+                    check_numbers.append(check_num_int)
+                pivot_data[param][check_num_int] = value
+                numeric_data[param][check_num_int] = numeric_value
+            else:
+                if check_num not in check_numbers:
+                    check_numbers.append(check_num)
+                pivot_data[param][check_num] = value
+                numeric_data[param][check_num] = numeric_value
+        except (ValueError, IndexError, AttributeError):
+            # ถ้าไม่สามารถแปลงได้ ให้ใช้ค่าเดิม
             if check_num not in check_numbers:
                 check_numbers.append(check_num)
             pivot_data[param][check_num] = value
@@ -305,27 +328,34 @@ def get_water_data(station_code):
     }
 
 def get_soil_data(station_code):
-    """Get soil quality data from PostgreSQL"""
-    query = """
-         SELECT 
-            parameter,
-            location,
-            check_number,
-            value,
-            numeric_value
-        FROM soil_data
-        WHERE TRIM(station) = %s
-    """
-    rows = pg_execute(query, (station_code.strip(),), fetch=True)
+    station_code_clean = station_code.strip()
+    print(f"🔍 get_soil_data: ค่า station_code_clean = '{station_code_clean}'")
     
+    query = """
+        SELECT parameter, location, check_number, value, numeric_value
+        FROM soil_data
+        WHERE LOWER(TRIM(station)) = LOWER(%s)
+    """
+    rows = pg_execute(query, (station_code_clean,), fetch=True)
+    print(f"✅ ดึงได้ {len(rows)} แถว จาก soil_data")
+
+    if not rows:
+        return {
+            'pivot_list_filtered': [],
+            'check_numbers': [],
+            'parameters': []
+        }
+    
+    # ประกาศตัวแปร
     pivot_data = {}
     numeric_data = {}
     check_numbers = []
     
     for row in rows:
-        param = row['parameter']
-        check_num = row['check_number']
-        value = row['value']
+        # ✅ ตรวจสอบ None ก่อนใช้งาน
+        param = row['parameter'] if row['parameter'] is not None else 'ไม่ระบุ'
+        check_num = row['check_number'] if row['check_number'] is not None else 'ไม่ระบุ'
+        value = row['value'] if row['value'] is not None else ''
         numeric_value = row.get('numeric_value', 0) if row.get('numeric_value') is not None else 0
         
         if param not in pivot_data:
@@ -333,17 +363,26 @@ def get_soil_data(station_code):
             numeric_data[param] = {}
         
         try:
-            check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
-            if check_num_int not in check_numbers:
-                check_numbers.append(check_num_int)
-            pivot_data[param][check_num_int] = value
-            numeric_data[param][check_num_int] = numeric_value
-        except (ValueError, IndexError):
+            # ✅ ตรวจสอบ check_num ก่อนแปลง
+            if isinstance(check_num, str) and 'ครั้งที่' in check_num:
+                check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
+                if check_num_int not in check_numbers:
+                    check_numbers.append(check_num_int)
+                pivot_data[param][check_num_int] = value
+                numeric_data[param][check_num_int] = numeric_value
+            else:
+                if check_num not in check_numbers:
+                    check_numbers.append(check_num)
+                pivot_data[param][check_num] = value
+                numeric_data[param][check_num] = numeric_value
+        except (ValueError, IndexError, AttributeError):
+            # ถ้าไม่สามารถแปลงได้ ให้ใช้ค่าเดิม
             if check_num not in check_numbers:
                 check_numbers.append(check_num)
             pivot_data[param][check_num] = value
             numeric_data[param][check_num] = numeric_value
     
+    # จัดเรียง check_numbers
     numeric_checks = sorted([c for c in check_numbers if isinstance(c, int)])
     text_checks = sorted([c for c in check_numbers if not isinstance(c, int)])
     sorted_checks = numeric_checks + text_checks
@@ -591,6 +630,48 @@ def edit_station(station_code):
 def migrate():
     # รันสคริปต์ migrate ที่นี่
     return "Migrated!"
+
+@app.route('/debug/station/<station_code>')
+def debug_station(station_code):
+    """Endpoint สำหรับทดสอบการดึงข้อมูลสถานี"""
+    station = get_station_by_code(station_code)
+    water = get_water_data(station_code)
+    soil = get_soil_data(station_code)
+
+    return {
+        'station': station,
+        'water_count': len(water['pivot_list_filtered']),
+        'soil_count': len(soil['pivot_list_filtered']),
+        'station_code': station_code
+    }
+
+@app.route('/debug-env')
+def debug_env():
+    has_db_url = 'DATABASE_URL' in os.environ
+    has_pg_host = 'PG_HOST' in os.environ
+    
+    return {
+        'has_DATABASE_URL': has_db_url,
+        'has_PG_HOST': has_pg_host,
+        'DATABASE_URL_sample': os.environ.get('DATABASE_URL', '')[:50] + '...' if has_db_url else None
+    }
+
+@app.route('/debug/db')
+def debug_db():
+    try:
+        conn = get_pg_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT version(), current_database()")
+        db_info = cur.fetchone()
+        conn.close()
+        
+        return {
+            "status": "✅ เชื่อมต่อสำเร็จ",
+            "database": db_info[1],
+            "version": db_info[0].split()[0]
+        }
+    except Exception as e:
+        return {"error": str(e)}
     
 if __name__ == '__main__':
     # Get port from environment variable or use default
