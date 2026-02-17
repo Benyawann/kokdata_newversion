@@ -2,304 +2,50 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>รายการสถานีตรวจสอบ</title>
-    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>รายการสถานีตรวจสอบ</title>
+    <link rel="stylesheet" href="/static/css/style1.css">
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>รายการสถานีตรวจสอบ</h1><span>ระบบแสดงข้อมูลสถานีตรวจสอบคุณภาพน้ำและดิน</span>
-        </div>
-        {% if session.logged_in %}
-         <div class="user-info top-right">
-            สวัสดี, {{ session.username or 'Admin' }}!
-            <a href="/logout" class="logout-btn">ออกจากระบบ</a>
-        </div>
-        {% else %}
-            <a href="/login" class="login-btn top-right">เข้าสู่ระบบ</a>
-        {% endif %}
-
-        <!-- search -->
-        <div class="left-panel">
-            <div class="search-and-stats">
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="ค้นหา... 🔍 ">
-                    <div class="filters">
-                        <!-- แม่น้ำ -->
-                        <select id="filter-river">
-                            <option value="">ทั้งหมด (แม่น้ำ)</option>
-                            {% for river in unique_rivers %}
-                            <option value="{{ river }}">{{ river }}</option>
-                        {% endfor %}
-                        </select>
-                        <!-- จังหวัด -->
-                        <select id="filter-province">
-                            <option value="">ทั้งหมด (จังหวัด)</option>
-                            {% for province in unique_provinces %}
-                            <option value="{{ province }}">{{ province }}</option>
-                            {% endfor %}
-                        </select>
-                        <!-- อำเภอ -->
-                        <select id="filter-amphoe">
-                            <option value="">ทั้งหมด (อำเภอ)</option>
-                            {% for amphoe in unique_amphoes %}
-                            <option value="{{ amphoe }}">{{ amphoe }}</option>
-                            {% endfor %}
-                        </select>
-                        <!-- ตำบล -->
-                        <select id="filter-tambon">
-                            <option value="">ทั้งหมด (ตำบล)</option>
-                            {% for tambon in unique_tambons %}
-                            <option value="{{ tambon }}">{{ tambon }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- stats -->
-        <div class="stats">
-            <!-- สถานีทั้งหมด -->
-            <div class="stat-card">
-                <img src="/static/image/location.png" alt="location icon" style="width: 100px; margin-bottom: 10px;">
-                <div class="number" id="total-stations">{{ stations|length }}</div>
-                <div class="label">สถานีทั้งหมด</div>
-            </div>
-            <!-- แม่น้ำ -->
-            <div class="stat-card">
-                <img src="/static/image/river.png" alt="location icon" style="width: 100px; margin-bottom: 10px;">
-                <div class="number" id="unique-rivers">{{ unique_rivers|length }}</div>
-                <div class="label">แม่น้ำ</div>
-            </div>
-            <!-- แสดงผล -->
-            <div class="stat-card">
-                <img src="/static/image/research.png" alt="location icon" style="width: 100px; margin-bottom: 10px;">
-                <div class="number" id="filtered-count">{{ stations|length }}</div>
-                <div class="label">แสดงผล</div>
-            </div>
-        </div>
-
-        <!-- stations grid -->
-        <div class="stations-grid" id="stations-grid">
-            {% for station in stations %}
-            <div class="station-card" 
-                 data-river="{{ station.river }}" 
-                 data-province="{{ station.province }}"
-                 data-amphoe="{{ station.amphoe }}"
-                 data-tambon="{{ station.tambon }}"
-                 data-station="{{ station.station }}"
-                 data-location="{{ station.location }}"
-                 onclick="window.location.href='/station/{{ station.station }}'">
-                <div class="station-header">
-                    <span class="river-name">{{ station.river }}</span>
-                    <span class="station-code">{{ station.station }}</span>
-                </div>
-                <div class="station-info">
-                    <div class="info-row">
-                        <img src="/static/image/pin.png" alt="location icon" style="width: 20px;"><span class="info-label">&nbsp; ตำบล:</span>
-                        <span class="info-value">{{ station.tambon }}</span>
-                    </div>
-                    <div class="info-row">
-                        <img src="/static/image/bank.png" alt="location icon" style="width: 20px;">
-                        <span class="info-label">&nbsp; อำเภอ:</span>
-                        <span class="info-value">{{ station.amphoe }}</span>
-                    </div>
-                    <div class="info-row">
-                        <img src="/static/image/book.png" alt="location icon" style="width: 20px;">
-                        <span class="info-label">&nbsp; จังหวัด:</span>
-                        <span class="info-value">{{ station.province }}</span>
-                    </div>
-                    <div class="location">
-                        <img src="/static/image/placeholder.png" alt="location icon" style="width: 20px;">
-                        <strong>&nbsp; ที่ตั้ง:</strong> {{ station.location }}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div class="no-results" id="no-results" style="display: none;">
-            ไม่พบสถานีที่ค้นหา
+        <h1>รายการสถานีตรวจสอบ</h1>
+        <a href="/add-station.html" class="btn-add">+ เพิ่มสถานีใหม่</a>
+        
+        <!-- พื้นที่แสดงรายการสถานี -->
+        <div id="stationList" style="margin-top: 20px;">
+            <p>กำลังโหลดข้อมูล...</p>
         </div>
     </div>
-        {% if session.logged_in %}
-            <a href="/static/pages/addstation.html">
-            <button class="floating-button" id="add"> + </button>
-            </a>
-        {% endif %}
-    <script id>
-        // Location hierarchy data from backend
-        const locationHierarchy = {{ location_hierarchy|tojson }};
-        
-        const searchInput = document.getElementById('search-input');
-        const filterRiver = document.getElementById('filter-river');
-        const filterProvince = document.getElementById('filter-province');
-        const filterAmphoe = document.getElementById('filter-amphoe');
-        const filterTambon = document.getElementById('filter-tambon');
-        const stationsGrid = document.getElementById('stations-grid');
-        const noResults = document.getElementById('no-results');
-        const filteredCount = document.getElementById('filtered-count');
 
-        const stationCards = Array.from(document.querySelectorAll('.station-card'));
+    <script>
+    // โหลดข้อมูลจาก API เมื่อเปิดหน้า
+    document.addEventListener('DOMContentLoaded', async () => {
+        const stationList = document.getElementById('stationList');
         
-        // Store original options for reset
-        const allAmphoes = [
-            {% for amphoe in unique_amphoes %}
-            "{{ amphoe }}"{% if not loop.last %},{% endif %}
-            {% endfor %}
-        ];
-        const allTambons = [
-            {% for tambon in unique_tambons %}
-            "{{ tambon }}"{% if not loop.last %},{% endif %}
-            {% endfor %}
-        ];
-
-        // Update Amphoe dropdown based on selected Province
-        function updateAmphoeDropdown() {
-            const selectedProvince = filterProvince.value;
-            const currentValue = filterAmphoe.value;
+        try {
+            const res = await fetch('/api/stations'); // เรียก API เพื่อดึงข้อมูลทั้งหมด
+            const result = await res.json();
             
-        // Clear amphoe dropdown
-        filterAmphoe.innerHTML = '<option value="">ทั้งหมด (อำเภอ)</option>';       
-            if (selectedProvince && locationHierarchy[selectedProvince]) {
-                const amphoes = Object.keys(locationHierarchy[selectedProvince]).sort();
-                amphoes.forEach(amphoe => {
-                    const option = document.createElement('option');
-                        option.value = amphoe;
-                        option.textContent = amphoe;
-                        filterAmphoe.appendChild(option);
+            if (result.success && result.data.length > 0) {
+                let html = '<div class="station-grid">';
+                result.data.forEach(st => {
+                    html += `
+                        <div class="station-card">
+                            <h3>${st.station}</h3>
+                            <p>แม่น้ำ: ${st.river}</p>
+                            <p>จังหวัด: ${st.province}</p>
+                            <a href="/station-detail.html?id=${st.id}" class="btn-view">ดูรายละเอียด</a>
+                        </div>
+                    `;
                 });
-            } else if (selectedProvince) {
-            // If no province selected, show all amphoes
-            allAmphoes.forEach(amphoe => {
-                const option = document.createElement('option');
-                    option.value = amphoe;
-                    option.textContent = amphoe;
-                    filterAmphoe.appendChild(option);
-            });
-        }
-            
-        // Reset amphoe selection if current value is not in new list
-        if (currentValue && !Array.from(filterAmphoe.options).some(opt => opt.value === currentValue)) {
-            filterAmphoe.value = '';
-        }
-            
-        // Trigger tambon update
-        updateTambonDropdown();
-        }
-        
-        // Update Tambon dropdown based on selected Amphoe
-        function updateTambonDropdown() {
-            const selectedProvince = filterProvince.value;
-            const selectedAmphoe = filterAmphoe.value;
-            const currentValue = filterTambon.value;
-            
-        // Clear tambon dropdown
-        filterTambon.innerHTML = '<option value="">ทั้งหมด (ตำบล)</option>';
-            
-            if (selectedProvince && selectedAmphoe && 
-                locationHierarchy[selectedProvince] && 
-                locationHierarchy[selectedProvince][selectedAmphoe]) {
-                // Show tambons in selected amphoe
-                const tambons = locationHierarchy[selectedProvince][selectedAmphoe];
-                tambons.forEach(tambon => {
-                    const option = document.createElement('option');
-                        option.value = tambon;
-                        option.textContent = tambon;
-                        filterTambon.appendChild(option);
-                });
-            } else if (selectedProvince && locationHierarchy[selectedProvince]) {
-            // If only province selected, show all tambons in that province
-            const allTambonsInProvince = new Set();
-            Object.values(locationHierarchy[selectedProvince]).forEach(tambons => {
-                tambons.forEach(t => allTambonsInProvince.add(t));
-            });
-            Array.from(allTambonsInProvince).sort().forEach(tambon => {
-                const option = document.createElement('option');
-                    option.value = tambon;
-                    option.textContent = tambon;
-                    filterTambon.appendChild(option);
-            });
-        } else {
-        // If no filters, show all tambons
-        allTambons.forEach(tambon => {
-            const option = document.createElement('option');
-                option.value = tambon;
-                option.textContent = tambon;
-                filterTambon.appendChild(option);
-            });
-        }
-            
-        // Reset tambon selection if current value is not in new list
-        if (currentValue && !Array.from(filterTambon.options).some(opt => opt.value === currentValue)) {
-            filterTambon.value = '';
-        }
-    }
-
-    function filterStations() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        const selectedRiver = filterRiver.value;
-        const selectedProvince = filterProvince.value;
-        const selectedAmphoe = filterAmphoe.value;
-        const selectedTambon = filterTambon.value;
-
-        let visibleCount = 0;
-
-        stationCards.forEach(card => {
-            const river = card.dataset.river;
-            const province = card.dataset.province;
-            const amphoe = card.dataset.amphoe;
-            const tambon = card.dataset.tambon;
-            const station = card.dataset.station.toLowerCase();
-            const location = card.dataset.location.toLowerCase();
-
-            const matchesSearch = !searchTerm || 
-                station.includes(searchTerm) || 
-                river.toLowerCase().includes(searchTerm) ||
-                location.includes(searchTerm);
-
-            const matchesRiver = !selectedRiver || river === selectedRiver;
-            const matchesProvince = !selectedProvince || province === selectedProvince;
-            const matchesAmphoe = !selectedAmphoe || amphoe === selectedAmphoe;
-            const matchesTambon = !selectedTambon || tambon === selectedTambon;
-
-            if (matchesSearch && matchesRiver && matchesProvince && matchesAmphoe && matchesTambon) {
-                card.style.display = 'block';
-                visibleCount++;
+                html += '</div>';
+                stationList.innerHTML = html;
             } else {
-                card.style.display = 'none';
+                stationList.innerHTML = '<p>ยังไม่มีข้อมูลสถานี</p>';
             }
-        });
-
-        filteredCount.textContent = visibleCount;
-
-        if (visibleCount === 0) {
-            noResults.style.display = 'block';
-            stationsGrid.style.display = 'none';
-        } else {
-            noResults.style.display = 'none';
-            stationsGrid.style.display = 'grid';
+        } catch (error) {
+            stationList.innerHTML = '<p style="color:red">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
         }
-    }
-
-    // Event listeners
-    searchInput.addEventListener('input', filterStations);
-    filterRiver.addEventListener('change', filterStations);
-        
-    filterProvince.addEventListener('change', function() {
-        updateAmphoeDropdown();
-        filterStations();
     });
-    filterAmphoe.addEventListener('change', function() {
-        updateTambonDropdown();
-        filterStations();
-    });
-    filterTambon.addEventListener('change', filterStations);
-    // Initialize dropdowns on page load
-    updateAmphoeDropdown();
     </script>
 </body>
 </html>
