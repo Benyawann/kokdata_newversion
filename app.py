@@ -219,12 +219,6 @@ def index():
     except Exception as e:
         return f"Error loading page: {str(e)}", 500
 
-# === API Route ===
-@app.route('/api/stations')
-def api_stations():
-    stations = get_stations()
-    return jsonify(stations)
-
 # === Test Route ===
 @app.route('/test')
 def test():
