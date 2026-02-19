@@ -86,13 +86,12 @@
                             {% for check_num in water_data.check_numbers %}
                                 <th>ครั้งที่ {{ check_num }}</th>
                             {% endfor %}
-                        <th>หน่วย</th>
-                    </tr>
-                </thead>
-            <tbody>
+                        </tr>
+                    </thead>
+                <tbody>
                 {% for row in water_data.pivot_list %}
                 <tr>
-                    <td style="font-weight: 600; background: #f8f9fa;">{{ row.parameter }}</td>
+                    <td style="font-weight: 600; background: #f8f9fa;">{{ row.parameter }} ({{ row.unit }})</td>
                     {% for check_num in water_data.check_numbers %}
                         {% set check_str = check_num|string %}
                         {% set val = row.check_values.get(check_str, '') %}
@@ -132,7 +131,6 @@
                             {% endif %}
                         </td>
                     {% endfor %}
-                    <td style="background: #f8f9fa; font-weight: 600;">{{ row.unit }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
