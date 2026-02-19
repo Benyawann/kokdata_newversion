@@ -1,0 +1,19 @@
+# .github/workflows/keep-supabase-awake.yml
+name: Keep Supabase Awake
+
+on:
+  schedule:
+    # รันทุก 3 วัน เวลา 00:00 UTC
+    - cron: '0 0 */3 * *'
+  workflow_dispatch:  # รันมือได้ถ้าต้องการ
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase API
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            "https://oaemdjvtphyrrfdxizzm.supabase.co/rest/v1/station_data?select=id&limit=1" \
+            -H "apikey: sb_publishable__QITKDh6ibJTnwjmBoPVJw_NJP8ASut" \
+            -H "Authorization: Bearer sb_publishable__QITKDh6ibJTnwjmBoPVJw_NJP8ASut"
