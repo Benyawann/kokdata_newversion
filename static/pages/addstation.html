@@ -15,7 +15,7 @@
             <p>กรุณากรอกข้อมูลให้ครบถ้วน</p>
         </div>
 
-        <form id="stationForm" class="station-form">
+        <form id="stationForm" class="station-form" action="/add-station" method="POST">
             <!-- ข้อมูลสถานี -->
             <div class="form-section">
                 <h2><img src="/static/image/pin.png" alt="location icon" style="width: 30px;">&nbsp; ข้อมูลสถานี</h2>
@@ -114,7 +114,7 @@
             const unitInput = document.createElement('input');
             unitInput.type = 'text';
             unitInput.className = 'unit-input';
-            unitInput.placeholder = 'mg/L';
+            unitInput.placeholder = 'NTU,mg/L';
             unitInput.required = true;
             unitCell.appendChild(unitInput);
             row.appendChild(unitCell);
