@@ -14,6 +14,6 @@ jobs:
       - name: Ping Supabase API
         run: |
           curl -s -o /dev/null -w "%{http_code}" \
-            "https://https://oaemdjvtphyrrfdxizzm.supabase.co/rest/v1/station_data?select=id&limit=1" \
+            "https://oaemdjvtphyrrfdxizzm.supabase.co/rest/v1/station_data?select=id&limit=1" \
             -H "apikey: sb_publishable__QITKDh6ibJTnwjmBoPVJw_NJP8ASut" \
             -H "Authorization: Bearer sb_publishable__QITKDh6ibJTnwjmBoPVJw_NJP8ASut"
