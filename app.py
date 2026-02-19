@@ -9,27 +9,28 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import secrets
+from dotenv import load_dotenv  # ← เพิ่มตรงนี้
+
+load_dotenv()  # ← โหลดทันทีหลัง import
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
 
-# === Database Connection (PostgreSQL/Neon) ===
+# === Register API Blueprint ===
+from api.index import api_bp
+app.register_blueprint(api_bp)
+
+# === Database Connection ===
 def get_db():
-    """เชื่อมต่อ PostgreSQL"""
-    conn = psycopg2.connect(
-        host=os.environ['POSTGRES_HOST'],
-        database=os.environ['POSTGRES_DATABASE'],
-        user=os.environ['POSTGRES_USER'],
-        password=os.environ['POSTGRES_PASSWORD'],
-        port=os.environ.get('POSTGRES_PORT', '5432')
-    )
-    # ใช้ RealDictCursor เพื่อเข้าถึง column ด้วยชื่อ
+    db_url = os.environ.get('SUPABASE_DATABASE_URL')
+    if not db_url:
+        raise ValueError("SUPABASE_DATABASE_URL not set in environment")
+    conn = psycopg2.connect(db_url)
     conn.cursor_factory = RealDictCursor
     return conn
 
-# === Initialize Database ===
 def init_db():
-    """สร้างตารางทั้งหมดถ้ายังไม่มี (PostgreSQL syntax)"""
+    conn = None
     try:
         conn = get_db()
         cur = conn.cursor()
@@ -39,38 +40,27 @@ def init_db():
             CREATE TABLE IF NOT EXISTS station_data (
                 id SERIAL PRIMARY KEY,
                 station TEXT UNIQUE NOT NULL,
-                river TEXT,
-                tambon TEXT,
-                amphoe TEXT,
-                province TEXT,
-                location TEXT
+                river TEXT, tambon TEXT, amphoe TEXT, province TEXT, location TEXT
             )
         """)
         
-        # ตารางข้อมูลน้ำ
+        # ✅ ตารางข้อมูลน้ำ — ใช้ station TEXT (ไม่ใช่ station_id)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS water_data (
                 id SERIAL PRIMARY KEY,
-                station_id INTEGER REFERENCES station_data(id) ON DELETE CASCADE,
-                parameter TEXT,
-                unit TEXT,
-                location TEXT,
-                check_number TEXT,
-                value TEXT,
-                numeric_value REAL
+                station TEXT REFERENCES station_data(station) ON DELETE CASCADE,
+                parameter TEXT, unit TEXT, location TEXT,
+                check_number TEXT, value TEXT, numeric_value REAL
             )
         """)
         
-        # ตารางข้อมูลดิน
+        # ✅ ตารางข้อมูลดิน — ใช้ station TEXT เช่นกัน
         cur.execute("""
             CREATE TABLE IF NOT EXISTS soil_data (
                 id SERIAL PRIMARY KEY,
-                station_id INTEGER REFERENCES station_data(id) ON DELETE CASCADE,
-                parameter TEXT,
-                location TEXT,
-                check_number TEXT,
-                value TEXT,
-                numeric_value REAL
+                station TEXT REFERENCES station_data(station) ON DELETE CASCADE,
+                parameter TEXT, location TEXT,
+                check_number TEXT, value TEXT, numeric_value REAL
             )
         """)
         
@@ -83,11 +73,11 @@ def init_db():
             )
         """)
         
-        # สร้าง indexes เพื่อความเร็ว
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_water_station ON water_data(station_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_soil_station ON soil_data(station_id)")
+        # ✅ Indexes — ใช้ชื่อคอลัมน์ที่ถูกต้อง (station)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_water_station ON water_data(station)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_soil_station ON soil_data(station)")
         
-        # สร้าง user admin เริ่มต้น (ถ้ายังไม่มี)
+        # สร้าง admin user
         cur.execute('SELECT COUNT(*) FROM users WHERE username = %s', ('admin',))
         if cur.fetchone()[0] == 0:
             cur.execute('INSERT INTO users (username, password) VALUES (%s, %s)', ('admin', 'admin123'))
@@ -241,11 +231,14 @@ def get_station_by_code(station_code):
 def get_water_data(station_code):
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(r"""
         SELECT parameter, unit, location, check_number, value, numeric_value
         FROM water_data
         WHERE TRIM(station) = %s
-        ORDER BY CAST(SUBSTRING(check_number FROM 6) AS INTEGER), parameter
+        ORDER BY 
+            NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+            check_number,
+            parameter
     """, (station_code.strip(),))
     
     pivot_data = {}
@@ -315,11 +308,14 @@ def get_water_data(station_code):
 def get_soil_data(station_code):
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(r"""
         SELECT parameter, location, check_number, value, numeric_value
         FROM soil_data
         WHERE TRIM(station) = %s
-        ORDER BY CAST(SUBSTRING(check_number FROM 6) AS INTEGER), parameter
+        ORDER BY 
+            NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+            check_number,
+            parameter
     """, (station_code.strip(),))
     
     pivot_data = {}
@@ -387,72 +383,140 @@ def get_soil_data(station_code):
 def add_station():
     if request.method == 'POST':
         try:
-            station = request.form['station'].strip()
-            river = request.form['river'].strip()
-            tambon = request.form['tambon'].strip()
-            amphoe = request.form['amphoe'].strip()
-            province = request.form['province'].strip()
-            location = request.form['location'].strip()
+            # === ดึงข้อมูลพื้นฐาน ===
+            station = request.form.get('station', '').strip()
+            river = request.form.get('river', '').strip()
+            tambon = request.form.get('tambon', '').strip()
+            amphoe = request.form.get('amphoe', '').strip()
+            province = request.form.get('province', '').strip()
+            location = request.form.get('location', '').strip()
+
+            # === Debug: พิมพ์ข้อมูลที่ได้รับ ===
+            print(f"\n🔍 === DEBUG: Add Station ===")
+            print(f"📍 station={station}")
+            print(f"📍 location={location}")
+            
+            # ดึงพารามิเตอร์น้ำ
+            parameters = request.form.getlist('parameter[]')
+            units = request.form.getlist('unit[]')
+            print(f"💧 parameters={parameters}")
+            print(f"💧 units={units}")
+            
+            # ดึงพารามิเตอร์ดิน
+            soil_params = request.form.getlist('soil_parameter[]')
+            print(f"🌱 soil_params={soil_params}")
+            
+            # ดึงค่าตรวจน้ำ (3 ครั้งแรกสำหรับ debug)
+            for i in range(1, 4):
+                check_vals = request.form.getlist(f'check{i}[]')
+                if check_vals:
+                    print(f"💧 check{i}={check_vals}")
+            
+            # ดึงค่าตรวจดิน (3 ครั้งแรกสำหรับ debug)
+            for i in range(1, 4):
+                soil_check_vals = request.form.getlist(f'soil_check{i}[]')
+                if soil_check_vals:
+                    print(f"🌱 soil_check{i}={soil_check_vals}")
+            print(f"🔍 === End Debug ===\n")
 
             conn = get_db()
             cur = conn.cursor()
-
-            # บันทึกสถานี
+            
+            # === 1. บันทึกสถานี ===
             cur.execute("""
                 INSERT INTO station_data (station, river, tambon, amphoe, province, location)
                 VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (station) DO UPDATE SET
+                    river = EXCLUDED.river,
+                    tambon = EXCLUDED.tambon,
+                    amphoe = EXCLUDED.amphoe,
+                    province = EXCLUDED.province,
+                    location = EXCLUDED.location
             """, (station, river, tambon, amphoe, province, location))
+            print(f"✅ Saved station: {station}")
+
+            # === 2. บันทึกข้อมูลน้ำ ===
+            water_count = 0
+            water_check_count = int(request.form.get('water_check_count', 14))
             
-            # ดึง id ที่เพิ่ง insert
-            cur.execute('SELECT id FROM station_data WHERE station = %s', (station,))
-            station_id = cur.fetchone()['id']
-
-            parameters = request.form.getlist('parameter[]')
-            units = request.form.getlist('unit[]')
-            soil_params = request.form.getlist('soil_parameter[]')
-
-            # บันทึกข้อมูลน้ำ
-            for i in range(1, 15):
+            for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
+                # ข้ามถ้าไม่มีค่าสำหรับครั้งที่ i นี้
+                if not check_values or all(v == '' for v in check_values):
+                    continue
+                    
                 for idx, param in enumerate(parameters):
-                    if idx < len(check_values):
-                        value = check_values[idx].strip()
-                        unit = units[idx].strip() if idx < len(units) else ''
-                        numeric_value = None
-                        if value and value not in ['-', 'ND']:
-                            try:
-                                numeric_value = 0.0 if value.startswith('<') else float(value)
-                            except ValueError:
-                                pass
-                        cur.execute("""
-                            INSERT INTO water_data (station_id, parameter, unit, location, check_number, value, numeric_value)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        """, (station_id, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
+                    if idx >= len(check_values):
+                        break
+                    value = check_values[idx].strip() if check_values[idx] else ''
+                    # ข้ามถ้าค่าว่าง
+                    if not value:
+                        continue
+                        
+                    unit = units[idx].strip() if idx < len(units) else ''
+                    
+                    # แปลงค่าเป็นตัวเลขถ้าเป็นไปได้
+                    numeric_value = None
+                    if value and value not in ['-', 'ND', '']:
+                        try:
+                            numeric_value = 0.0 if value.startswith('<') else float(value)
+                        except ValueError:
+                            pass
+                    
+                    cur.execute("""
+                        INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (station, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
+                    water_count += 1
+            
+            print(f"✅ Saved {water_count} water data records")
 
-            # บันทึกข้อมูลดิน
-            for i in range(1, 9):
+            # === 3. บันทึกข้อมูลดิน ===
+            soil_count = 0
+            soil_check_count = int(request.form.get('soil_check_count', 8))
+            
+            for i in range(1, soil_check_count + 1):
                 soil_check_values = request.form.getlist(f'soil_check{i}[]')
+                if not soil_check_values or all(v == '' for v in soil_check_values):
+                    continue
+                    
                 for idx, param in enumerate(soil_params):
-                    if idx < len(soil_check_values):
-                        value = soil_check_values[idx].strip()
-                        numeric_value = None
-                        if value and value not in ['-', 'ND']:
-                            try:
-                                numeric_value = 0.0 if value.startswith('<') else float(value)
-                            except ValueError:
-                                pass
-                        cur.execute("""
-                            INSERT INTO soil_data (station_id, parameter, location, check_number, value, numeric_value)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                        """, (station_id, param, location, f'ครั้งที่ {i}', value, numeric_value))
+                    if idx >= len(soil_check_values):
+                        break
+                    value = soil_check_values[idx].strip() if soil_check_values[idx] else ''
+                    if not value:
+                        continue
+                        
+                    numeric_value = None
+                    if value and value not in ['-', 'ND', '']:
+                        try:
+                            numeric_value = 0.0 if value.startswith('<') else float(value)
+                        except ValueError:
+                            pass
+                    
+                    cur.execute("""
+                        INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (station, param, location, f'ครั้งที่ {i}', value, numeric_value))
+                    soil_count += 1
+            
+            print(f"✅ Saved {soil_count} soil data records")
 
             conn.commit()
             conn.close()
-            return jsonify({'success': True})
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Saved successfully',
+                'water': water_count, 
+                'soil': soil_count
+            })
 
         except Exception as e:
-            print("Error saving station:", str(e))
-            return jsonify({'success': False, 'message': str(e)})
+            print(f"❌ Error saving station: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': str(e)}), 500
 
     return render_template('add_station.html')
 
@@ -463,10 +527,11 @@ def delete_station(station_code):
     try:
         conn = get_db()
         cur = conn.cursor()
-        # ลบข้อมูลในตารางลูกก่อน (Foreign Key จะจัดการให้ถ้ามี ON DELETE CASCADE)
-        cur.execute('DELETE FROM water_data WHERE TRIM(station) = %s', (station_code.strip(),))
-        cur.execute('DELETE FROM soil_data WHERE TRIM(station) = %s', (station_code.strip(),))
-        cur.execute('DELETE FROM station_data WHERE TRIM(station) = %s', (station_code.strip(),))
+        
+        # ✅ ON DELETE CASCADE จะลบ water_data และ soil_data ให้เอง
+        # ลบแค่ station_data ก็พอ
+        cur.execute('DELETE FROM station_data WHERE station = %s', (station_code.strip(),))
+        
         conn.commit()
         conn.close()
         return jsonify({'success': True})
@@ -481,13 +546,22 @@ def station_detail(station_code):
         station = get_station_by_code(station_code)
         if not station:
             return f"ไม่พบสถานี: {station_code}", 404
+        
         water_data = get_water_data(station_code)
         soil_data = get_soil_data(station_code)
+        
+        # Debug
+        print(f"DEBUG: water_data = {water_data}")
+        print(f"DEBUG: soil_data = {soil_data}")
+        
         return render_template('station_detail.html',
                              station=station,
                              water_data=water_data,
                              soil_data=soil_data)
     except Exception as e:
+        print(f"ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return f"Error loading station: {str(e)}", 500
 
 # === Edit Station Route ===
@@ -510,18 +584,19 @@ def edit_station(station_code):
             cur.execute("""
                 UPDATE station_data 
                 SET station = %s, river = %s, tambon = %s, amphoe = %s, province = %s, location = %s
-                WHERE TRIM(station) = %s
+                WHERE station = %s
             """, (station, river, tambon, amphoe, province, location, station_code))
 
             # ลบข้อมูลน้ำและดินเดิม
-            cur.execute('DELETE FROM water_data WHERE TRIM(station) = %s', (station_code,))
-            cur.execute('DELETE FROM soil_data WHERE TRIM(station) = %s', (station_code,))
+            cur.execute('DELETE FROM water_data WHERE station = %s', (station_code.strip(),))
+            cur.execute('DELETE FROM soil_data WHERE station = %s', (station_code.strip(),))
+            cur.execute('DELETE FROM station_data WHERE station = %s', (station_code.strip(),))
 
             parameters = request.form.getlist('parameter[]')
             units = request.form.getlist('unit[]')
             soil_params = request.form.getlist('soil_parameter[]') 
 
-            # บันทึกข้อมูลน้ำใหม่
+            # บันทึกข้อมูลน้ำใหม่ — ใช้ station (TEXT)
             water_check_count = int(request.form.get('water_check_count', 14))
             for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
@@ -536,8 +611,8 @@ def edit_station(station_code):
                             except ValueError:
                                 pass
                         cur.execute("""
-                            INSERT INTO water_data (station_id, parameter, unit, location, check_number, value, numeric_value)
-                            VALUES ((SELECT id FROM station_data WHERE station = %s), %s, %s, %s, %s, %s, %s)
+                            INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
                         """, (station, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
 
             # บันทึกข้อมูลดินใหม่
@@ -554,8 +629,8 @@ def edit_station(station_code):
                             except ValueError:
                                 pass
                         cur.execute("""
-                            INSERT INTO soil_data (station_id, parameter, location, check_number, value, numeric_value)
-                            VALUES ((SELECT id FROM station_data WHERE station = %s), %s, %s, %s, %s, %s)
+                            INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
+                            VALUES (%s, %s, %s, %s, %s, %s)
                         """, (station, param, location, f'ครั้งที่ {i}', value, numeric_value))
             
             conn.commit()
@@ -563,32 +638,39 @@ def edit_station(station_code):
             return jsonify({'success': True})
 
         except Exception as e:
-            print("Error updating station:", str(e))
-            return jsonify({'success': False, 'message': str(e)})
-
-    # GET: ดึงข้อมูลเดิมมา pre-fill
+            print(f"ERROR in edit_station POST: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    # === GET: ดึงข้อมูลเดิมมา pre-fill ===
     try:
         conn = get_db()
         cur = conn.cursor()
 
         station_row = cur.execute("""
             SELECT river, station, location, tambon, amphoe, province
-            FROM station_data WHERE TRIM(station) = %s
+            FROM station_data WHERE station = %s
         """, (station_code.strip(),)).fetchone()
 
         if not station_row:
+            conn.close()
             return "ไม่พบสถานี", 404
 
-        water_rows = cur.execute("""
+        water_rows = cur.execute(r"""
             SELECT parameter, unit, check_number, value
-            FROM water_data WHERE TRIM(station) = %s
-            ORDER BY CAST(SUBSTRING(check_number FROM 6) AS INTEGER)
+            FROM water_data WHERE station = %s
+            ORDER BY 
+                NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+                check_number
         """, (station_code.strip(),)).fetchall()
 
-        soil_rows = cur.execute("""
+        soil_rows = cur.execute(r"""
             SELECT parameter, check_number, value
-            FROM soil_data WHERE TRIM(station) = %s
-            ORDER BY CAST(SUBSTRING(check_number FROM 6) AS INTEGER)
+            FROM soil_data WHERE station = %s
+            ORDER BY 
+                NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+                check_number
         """, (station_code.strip(),)).fetchall()
 
         conn.close()
@@ -598,7 +680,7 @@ def edit_station(station_code):
             param = row['parameter']
             if param not in water_data:
                 water_data[param] = {'unit': row['unit'], 'checks': {}}
-            check_num = int(row['check_number'].replace('ครั้งที่', '').strip())
+            check_num = row['check_number']
             water_data[param]['checks'][check_num] = row['value']
 
         soil_data = {}
@@ -606,7 +688,7 @@ def edit_station(station_code):
             param = row['parameter']
             if param not in soil_data:
                 soil_data[param] = {'checks': {}}
-            check_num = int(row['check_number'].replace('ครั้งที่', '').strip())
+            check_num = row['check_number']
             soil_data[param]['checks'][check_num] = row['value']
 
         water_check_count = len(next(iter(water_data.values()))['checks']) if water_data else 14
@@ -620,7 +702,17 @@ def edit_station(station_code):
                              soil_check_count=soil_check_count)
 
     except Exception as e:
+        print(f"ERROR in edit_station GET: {e}")
+        import traceback
+        traceback.print_exc()
         return f"Error loading edit form: {str(e)}", 500
+    
+@app.route('/env-test')
+def env_test():
+    return {
+        'POSTGRES_HOST': os.environ.get('POSTGRES_HOST'),
+        'DATABASE_URL': os.environ.get('DATABASE_URL')[:50] + '...' if os.environ.get('DATABASE_URL') else None
+    }
 
 # === Main Entry Point ===
 if __name__ == '__main__':
