@@ -587,16 +587,16 @@ def edit_station(station_code):
                 WHERE station = %s
             """, (station, river, tambon, amphoe, province, location, station_code))
 
-            # ลบข้อมูลน้ำและดินเดิม
+            # ✅ ลบเฉพาะข้อมูลน้ำและดินเดิม (ไม่ต้องลบ station_data เพราะเราแค่ UPDATE)
             cur.execute('DELETE FROM water_data WHERE station = %s', (station_code.strip(),))
             cur.execute('DELETE FROM soil_data WHERE station = %s', (station_code.strip(),))
-            cur.execute('DELETE FROM station_data WHERE station = %s', (station_code.strip(),))
+            # ❌ ลบบรรทัดนี้: cur.execute('DELETE FROM station_data WHERE station = %s', ...)
 
             parameters = request.form.getlist('parameter[]')
             units = request.form.getlist('unit[]')
             soil_params = request.form.getlist('soil_parameter[]') 
 
-            # บันทึกข้อมูลน้ำใหม่ — ใช้ station (TEXT)
+            # บันทึกข้อมูลน้ำใหม่
             water_check_count = int(request.form.get('water_check_count', 14))
             for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
@@ -648,33 +648,40 @@ def edit_station(station_code):
         conn = get_db()
         cur = conn.cursor()
 
-        station_row = cur.execute("""
+        # ✅ ดึงข้อมูลสถานี (แยก execute กับ fetchone)
+        cur.execute("""
             SELECT river, station, location, tambon, amphoe, province
             FROM station_data WHERE station = %s
-        """, (station_code.strip(),)).fetchone()
+        """, (station_code.strip(),))
+        station_row = cur.fetchone()
 
         if not station_row:
             conn.close()
             return "ไม่พบสถานี", 404
 
-        water_rows = cur.execute(r"""
+        # ✅ ดึงข้อมูลน้ำ (แยก execute กับ fetchall)
+        cur.execute(r"""
             SELECT parameter, unit, check_number, value
             FROM water_data WHERE station = %s
             ORDER BY 
                 NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
                 check_number
-        """, (station_code.strip(),)).fetchall()
+        """, (station_code.strip(),))
+        water_rows = cur.fetchall()  # ← แยกจาก execute()
 
-        soil_rows = cur.execute(r"""
+        # ✅ ดึงข้อมูลดิน (แยก execute กับ fetchall)
+        cur.execute(r"""
             SELECT parameter, check_number, value
             FROM soil_data WHERE station = %s
             ORDER BY 
                 NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
                 check_number
-        """, (station_code.strip(),)).fetchall()
+        """, (station_code.strip(),))
+        soil_rows = cur.fetchall()  # ← แยกจาก execute()
 
         conn.close()
 
+        # จัดรูปแบบข้อมูลสำหรับ template
         water_data = {}
         for row in water_rows:
             param = row['parameter']
