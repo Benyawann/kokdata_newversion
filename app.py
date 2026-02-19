@@ -714,6 +714,13 @@ def env_test():
         'DATABASE_URL': os.environ.get('DATABASE_URL')[:50] + '...' if os.environ.get('DATABASE_URL') else None
     }
 
+@app.route('/check-env')
+def check_env():
+    return {
+        "SUPABASE_DATABASE_URL": "SET" if os.environ.get('SUPABASE_DATABASE_URL') else "NOT SET",
+        "SECRET_KEY": "SET" if os.environ.get('SECRET_KEY') else "NOT SET"
+    }
+
 # === Main Entry Point ===
 if __name__ == '__main__':
     # ✅ สร้างตารางถ้ายังไม่มี
