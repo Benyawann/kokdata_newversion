@@ -92,7 +92,7 @@
 // เก็บจำนวนคอลัมน์ปัจจุบัน
 let waterCheckColumns = {{ water_check_count }};
 let soilCheckColumns = {{ soil_check_count }};
-// === สร้างแถว ===
+/// === สร้างแถว ===
 function createRow(type, checkCount, data = null) {
     const row = document.createElement('tr');
     const isSoil = (type === 'soil');
@@ -108,15 +108,19 @@ function createRow(type, checkCount, data = null) {
     paramCell.appendChild(paramInput);
     row.appendChild(paramCell);
 
-    // ช่องครั้งที่ 1 ถึง checkCount
+    // ✅ ช่องครั้งที่ 1 ถึง checkCount (แก้ key ให้ตรง)
     for (let i = 1; i <= checkCount; i++) {
         const cell = document.createElement('td');
         const input = document.createElement('input');
         input.type = 'text';
         input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;
-        if (data && data.checks && data.checks[i]) {
-            input.value = data.checks[i];
+        
+        // ✅ สร้าง key ให้ตรงกับ Python: 'ครั้งที่ 1', 'ครั้งที่ 2', ...
+        const checkKey = `ครั้งที่ ${i}`;
+        if (data && data.checks && data.checks[checkKey]) {
+            input.value = data.checks[checkKey];
         }
+        
         cell.appendChild(input);
         row.appendChild(cell);
     }
