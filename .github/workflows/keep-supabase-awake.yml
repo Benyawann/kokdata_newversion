@@ -6,32 +6,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  keep-alive:
+  ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase with Heartbeat
+      - name: Ping Supabase
         run: |
-          echo "🔍 Keeping Supabase awake..."
-          
-          # 1. สร้างตาราง heartbeat ถ้ายังไม่มี
-          curl -s -X POST \
-            "https://oaemdjvtphyrrfdxizzm.supabase.co/rest/v1/rpc/create_heartbeat_table" \
+          echo "🔍 Pinging Supabase..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://oaemdjvtphyrrfdxizzm.supabase.co/rest/v1/station_data?select=id&limit=1" \
             -H "apikey: ${SUPABASE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{}' || true
-          
-          # 2. อัปเดต timestamp ในตาราง heartbeat
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-            "https://oaemdjvtphyrrfdxizzm.supabase.co/rest/v1/heartbeat" \
-            -H "apikey: ${SUPABASE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"last_ping": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "status": "awake"}')
+            -H "Authorization: Bearer ${SUPABASE_KEY}")
           
           echo "📊 HTTP Response: $RESPONSE"
           
-          if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
+          if [ "$RESPONSE" = "200" ]; then
             echo "✅ Success! Supabase is awake!"
           else
             echo "⚠️ Response: $RESPONSE"
