@@ -1,0 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Noto+Sans+Thai:wght@100..900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Noto Sans Thai", sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #B8D4A5 0%, #CFAF9F 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* ===== ปุ่มย้อนกลับ ===== */
+.back-button {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background: white;
+    color: black;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.back-button:hover {
+    background: #99ADA8;
+    color: white;
+    transform: translateX(-5px);
+}
+
+/* ===== Layout หลัก: 2 คอลัมน์ ===== */
+.main-layout {
+    display: flex;
+    gap: 24px;
+    margin-top: 10px;
+    align-items: stretch;
+}
+
+.map-column {
+    flex: 2;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-column {
+    flex: 1;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ===== การ์ดทั่วไป ===== */
+.map-container,
+.info-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.map-container {
+    display: flex;
+    flex-direction: column;
+    /* flex: 1; */
+}
+
+/* ===== ส่วนหัวแผนที่ ===== */
+.station-header-map {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.station-header-map h1 {
+    margin: 0;
+    color: black;
+    font-size: 1.5em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ===== ปุ่มเปลี่ยนประเภทแผนที่ ===== */
+.map-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.map-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: all 0.2s;
+    background: #e0e0e0;
+    color: #333;
+}
+
+.map-btn.active {
+    background: #3e74d8;
+    color: white;
+}
+
+.map-btn:hover:not(.active) {
+    background: #d0d0d0;
+}
+
+/* ===== แผนที่ Leaflet ===== */
+#map {
+    height: 550px;
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1;
+}
+
+/* ===== การ์ดข้อมูลสถานี ===== */
+.info-card h3 {
+    margin: 0 0 15px 0;
+    color: black;
+    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.station-info-map {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.info-item-map {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.info-item-map img {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.info-label-map {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.85em;
+}
+
+.info-value-map {
+    color: #333;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+
+/* ===== กราฟ ===== */
+.parameter-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.parameter-selector select {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9em;
+    background: white;
+    cursor: pointer;
+}
+
+.chart-toggle {
+    padding: 8px 16px;
+    background: #6d9b86;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: background 0.2s;
+}
+
+.chart-toggle:hover {
+    background: #739586;
+}
+
+.chart-toggle.active {
+    background: #6d9b86;
+}
+
+.chart-container {
+    height: 250px;
+    margin-top: 10px;
+}
+
+/* ===== หมายเหตุ/คำเตือน ===== */
+.chart-warning,
+.chart-warning-legend {
+    color: red;
+    font-size: 0.85em;
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff5f5;
+    border-left: 3px solid #dc3545;
+    border-radius: 4px;
+    line-height: 1.5;
+}
+
+.chart-warning-legend {
+    background: #f1f1f1;
+    border-color: #b8d9df;
+}
+
+.legend-blue { color: blue; font-weight: bold; }
+.legend-red { color: red; font-weight: bold; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+    .main-layout {
+        flex-direction: column;
+    }
+    
+    .map-column,
+    .info-column {
+        flex: none;
+        width: 100%;
+    }
+    
+    #map {
+        height: 400px;
+    }
+    
+    .station-info-map {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .station-header-map h1 {
+        font-size: 1.2em;
+    }
+    
+    .map-controls {
+        justify-content: center;
+    }
+    
+    .parameter-selector {
+        flex-direction: column;
+    }
+    
+    .parameter-selector select,
+    .chart-toggle {
+        width: 100%;
+    }
+}
+
+/* ===== Leaflet Popup Custom ===== */
+.leaflet-popup-content-wrapper {
+    border-radius: 10px;
+    font-family: "Noto Sans Thai", sans-serif;
+}
+
+.leaflet-popup-content {
+    margin: 15px;
+    font-size: 0.95em;
+}
