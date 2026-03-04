@@ -125,10 +125,13 @@ def login_required(f):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
         
-        print(f"DEBUG: กรอก username='{username}', password='{password}'")
+        print(f"🔍 DEBUG: login attempt - username='{username}'")
+        
+        # ✅ ตรวจสอบว่าเป็น AJAX request หรือไม่
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
         conn = get_db()
         cur = conn.cursor()
@@ -136,15 +139,35 @@ def login():
         row = cur.fetchone()
         conn.close()
         
-        print(f"DEBUG: ดึงข้อมูลจาก DB ได้: {row}")
+        print(f"🔍 DEBUG: DB result - {row}")
         
         if row and row['password'] == password:
+            # ✅ เข้าสู่ระบบสำเร็จ
             session['logged_in'] = True
             session['username'] = username
-            return redirect(url_for('index'))
+            
+            if is_ajax:
+                # ✅ คืนค่า JSON สำหรับ AJAX
+                return jsonify({
+                    'success': True,
+                    'message': 'เข้าสู่ระบบสำเร็จ',
+                    'redirect_url': url_for('index')
+                })
+            else:
+                # ✅ Redirect สำหรับ form submit ปกติ (รองรับกรณีไม่มี JS)
+                return redirect(url_for('index'))
         else:
-            flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณากรอกใหม่', 'error')
+            # ❌ เข้าสู่ระบบไม่สำเร็จ
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'message': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'
+                }), 401  # HTTP 401 Unauthorized
+            else:
+                flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณากรอกใหม่', 'error')
+                return redirect(url_for('login'))
     
+    # ✅ GET request: แสดงหน้า login
     return render_template('login.html')
 
 # === Logout Route ===
