@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แผนที่สถานี {{ station.station }}</title>
+    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
+    <link rel="stylesheet" href="/static/css/map_style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <a href="/station/{{ station.station }}" class="back-button">ย้อนกลับ</a>
+    
+    <div class="main-layout">
+        <!-- ฝั่งซ้าย: แผนที่ -->
+        <div class="map-column">
+            <div class="map-container">
+                <div class="station-header-map">
+                    <h1><img src="/static/image/pin.png" width="20px" height="20px"> แผนที่สถานี {{ station.station }}</h1>
+                </div>
+                <div class="map-controls">
+                    <button class="map-btn active" onclick="changeMapType('street')">ถนน</button>
+                    <button class="map-btn" onclick="changeMapType('satellite')">ดาวเทียม</button>
+                    <button class="map-btn" onclick="changeMapType('terrain')">ภูมิประเทศ</button>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+        
+        <!-- ฝั่งขวา: ข้อมูล + กราฟ + รายงาน -->
+        <div class="info-column">
+            <!-- ข้อมูลสถานี -->
+            <div class="info-card">
+                <h3>📋 ข้อมูลสถานี</h3>
+                <div class="station-info-map">
+                    <div class="info-item-map">
+                        <img src="/static/image/river.png">
+                        <div><div class="info-label-map">แม่น้ำ</div><div class="info-value-map">{{ station.river }}</div></div>
+                    </div>
+                    <div class="info-item-map">
+                        <img src="/static/image/pin.png">
+                        <div><div class="info-label-map">ตำบล</div><div class="info-value-map">{{ station.tambon }}</div></div>
+                    </div>
+                    <div class="info-item-map">
+                        <img src="/static/image/bank.png">
+                        <div><div class="info-label-map">อำเภอ</div><div class="info-value-map">{{ station.amphoe }}</div></div>
+                    </div>
+                    <div class="info-item-map">
+                        <img src="/static/image/book.png">
+                        <div><div class="info-label-map">จังหวัด</div><div class="info-value-map">{{ station.province }}</div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- กราฟน้ำ -->
+            {% if water_data and water_data.pivot_list %}
+            <div class="info-card">
+                <h3>📊 กราฟคุณภาพน้ำ</h3>
+                <div class="parameter-selector">
+                    <select id="water-parameter-select">
+                        <option value="">เลือกพารามิเตอร์</option>
+                        {% for row in water_data.pivot_list %}
+                        <option value="{{ row.parameter }}" data-unit="{{ row.unit }}">{{ row.parameter }} ({{ row.unit }})</option>
+                        {% endfor %}
+                    </select>
+                    <button class="chart-toggle" id="water-chart-toggle" style="display:none;">แสดงกราฟ</button>
+                </div>
+                <div id="water-chart-container" class="chart-container" style="display:none;">
+                    <canvas id="waterChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- กราฟดิน -->
+            {% if soil_data and soil_data.pivot_list %}
+            <div class="info-card">
+                <h3>🌱 กราฟคุณภาพตะกอนดิน</h3>
+                <div class="parameter-selector">
+                    <select id="soil-parameter-select">
+                        <option value="">เลือกพารามิเตอร์</option>
+                        {% for row in soil_data.pivot_list %}
+                        <option value="{{ row.parameter }}">{{ row.parameter }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="chart-toggle" id="soil-chart-toggle" style="display:none;">แสดงกราฟ</button>
+                </div>
+                <div id="soil-chart-container" class="chart-container" style="display:none;">
+                    <canvas id="soilChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- หมายเหตุ -->
+            <div class="info-card">
+                <h3>⚠️ หมายเหตุ</h3>
+                <div class="chart-warning">
+                    กรณีที่กราฟแสดงเป็น 0 เนื่องจากค่าน้อยกว่าที่ห้องปฏิบัติการสามารถอ่านผลได้ 
+                    ให้ดูจากผลในตารางเป็นหลัก
+                </div>
+                <p style="font-size:0.85em;color:#4a85ce;margin-top:10px;">
+                    <strong>แหล่งข้อมูล:</strong> สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ===== ข้อมูลจาก Backend =====
+const stationLocation = "{{ station.location }}";
+const stationCode = "{{ station.station }}";
+const stationName = "{{ station.river }}";
+const waterData = {{ water_data|tojson if water_data else 'null' }};
+const soilData = {{ soil_data|tojson if soil_data else 'null' }};
+
+// ===== Debug: ตรวจสอบข้อมูลที่ได้รับ =====
+console.log('=== Map Page Debug ===');
+console.log('waterData:', waterData);
+console.log('soilData:', soilData);
+if (waterData && waterData.pivot_list) {
+    console.log('Water pivot_list sample:', waterData.pivot_list[0]);
+}
+if (soilData && soilData.pivot_list) {
+    console.log('Soil pivot_list sample:', soilData.pivot_list[0]);
+}
+
+// ===== ตั้งค่าแผนที่ =====
+let defaultLat = 19.9103;
+let defaultLng = 99.8406;
+
+{% if station.latitude and station.longitude %}
+defaultLat = {{ station.latitude }};
+defaultLng = {{ station.longitude }};
+{% endif %}
+
+const map = L.map('map').setView([defaultLat, defaultLng], 13);
+
+const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19
+});
+
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '© Esri',
+    maxZoom: 19
+});
+
+const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenTopoMap',
+    maxZoom: 17
+});
+
+streetLayer.addTo(map);
+
+const marker = L.marker([defaultLat, defaultLng]).addTo(map);
+marker.bindPopup(`
+    <div style="text-align:center;min-width:200px;">
+        <strong style="color:black">${stationName}</strong><br>
+        <span style="color:#666;font-size:0.9em;">${stationLocation}</span><br>
+    </div>
+`).openPopup();
+
+// ===== เปลี่ยนประเภทแผนที่ =====
+function changeMapType(type) {
+    map.removeLayer(streetLayer);
+    map.removeLayer(satelliteLayer);
+    map.removeLayer(terrainLayer);
+    
+    if (type === 'street') streetLayer.addTo(map);
+    else if (type === 'satellite') satelliteLayer.addTo(map);
+    else if (type === 'terrain') terrainLayer.addTo(map);
+    
+    document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// ===== ฟังก์ชันช่วยดึงข้อมูลกราฟ =====
+function extractChartData(row, checkNumbers) {
+    const labels = [];
+    const data = [];
+    
+    // รองรับทั้ง numeric_values (pre-processed) และ check_values (raw)
+    const values = row.numeric_values || row.check_values || {};
+    
+    for (const checkNum of checkNumbers) {
+        const key = checkNum.toString();
+        let val = values[key];
+        
+        // แปลงค่าที่เป็น string หรือพิเศษ
+        if (val === null || val === undefined || val === '' || val === '-' || val === 'ND' || val === '<ND') {
+            continue; // ข้ามค่าที่ไม่มี
+        }
+        
+        const num = typeof val === 'number' ? val : parseFloat(val);
+        if (!isNaN(num)) {
+            labels.push(`ครั้งที่ ${checkNum}`);
+            data.push(num);
+        }
+    }
+    
+    return { labels, data };
+}
+
+// ===== ฟังก์ชันสร้างกราฟน้ำ =====
+let waterChart = null;
+function createWaterChart(parameter) {
+    console.log(`Creating water chart for: ${parameter}`);
+    
+    if (!waterData) { console.error('waterData is null'); alert('ไม่มีข้อมูลคุณภาพน้ำ'); return; }
+    
+    const pivotList = waterData.pivot_list_filtered || waterData.pivot_list || [];
+    const row = pivotList.find(r => r.parameter === parameter);
+    if (!row) { console.error('Parameter not found:', parameter); alert('ไม่พบข้อมูลสำหรับพารามิเตอร์นี้'); return; }
+    
+    const checkNumbers = waterData.check_numbers || Object.keys(row.numeric_values || row.check_values || {});
+    const { labels, data } = extractChartData(row, checkNumbers);
+    
+    if (data.length === 0) { alert('ไม่มีข้อมูลตัวเลขที่สามารถแสดงกราฟได้'); return; }
+    
+    const ctx = document.getElementById('waterChart')?.getContext('2d');
+    if (!ctx) return;
+    if (waterChart) waterChart.destroy();
+    
+    const unit = row.unit || '';
+    
+    // ✅ กำหนดค่ามาตรฐานน้ำ
+    const waterThresholds = {
+        'สารหนู': 0.01, 'แมงกานีส': 1.0, 'ตะกั่ว': 0.05, 'ปรอท': 0.002,
+        'ทองแดง': 0.1, 'สังกะสี': 1.0, 'นิกเกิล': 0.1, 'แคดเมียม': 0.005
+    };
+    const thresholdValue = waterThresholds[parameter];
+    
+    // ✅ สร้าง annotations object
+    const annotations = {};
+    if (thresholdValue !== undefined) {
+        annotations.thresholdLine = {
+            type: 'line',
+            yMin: thresholdValue, yMax: thresholdValue,
+            borderColor: 'red', borderWidth: 2, borderDash: [6, 6],
+            label: {
+                display: true,
+                content: `ค่ามาตรฐาน: ${thresholdValue}`,
+                position: 'start',
+                backgroundColor: 'red', color: 'white', font: { size: 11 }
+            }
+        };
+    }
+    
+    // ✅ แก้ไข: เพิ่ม "data:" ให้ถูกต้อง
+    waterChart = new Chart(ctx, {
+        type: 'line',
+        data: {  // ← ต้องมี key นี้
+            labels: labels,
+            datasets: [{
+                label: `${parameter} (${unit})`,
+                data: data,
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 2, tension: 0.4, fill: true,
+                pointRadius: 4, pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { label: function(context) { return `${context.parsed.y} ${unit}`; } }
+                },
+                annotation: { annotations: annotations }  // ✅ ใช้ annotations object ที่สร้างไว้
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: unit }, ticks: { precision: 2 } },
+                x: { title: { display: true, text: 'ครั้งที่ตรวจ' } }
+            }
+        }
+    });
+    console.log('Water chart created successfully');
+}
+
+
+
+// ===== ฟังก์ชันสร้างกราฟดิน =====
+let soilChart = null;
+function createSoilChart(parameter) {
+    console.log(`Creating soil chart for: ${parameter}`);
+    
+    if (!soilData) { console.error('soilData is null'); alert('ไม่มีข้อมูลคุณภาพตะกอนดิน'); return; }
+    
+    const pivotList = soilData.pivot_list_filtered || soilData.pivot_list || [];
+    const row = pivotList.find(r => r.parameter === parameter);
+    if (!row) { console.error('Parameter not found:', parameter); alert('ไม่พบข้อมูลสำหรับพารามิเตอร์นี้'); return; }
+    
+    const checkNumbers = soilData.check_numbers || Object.keys(row.numeric_values || row.check_values || {});
+    const { labels, data } = extractChartData(row, checkNumbers);
+    
+    if (data.length === 0) { alert('ไม่มีข้อมูลตัวเลขที่สามารถแสดงกราฟได้'); return; }
+    
+    const ctx = document.getElementById('soilChart')?.getContext('2d');
+    if (!ctx) return;
+    if (soilChart) soilChart.destroy();
+    
+    // ✅ กำหนดค่ามาตรฐานดิน (Safe = น้ำเงิน, Unsafe = แดง)
+    const soilThresholds = {
+        'สารหนู': { safe: 10, unsafe: 33 },
+        'แคดเมียม': { safe: 1, unsafe: 5 },
+        'นิกเกิล': { safe: 23, unsafe: 50 },
+        'ตะกั่ว': { safe: 36, unsafe: 130 },
+        'สังกะสี': { safe: 120, unsafe: 460 },
+        'ทองแดง': { safe: 31.5, unsafe: 150 },
+        'ปรอท': { safe: 0.2, unsafe: 1.0 },
+        'โครเมียม': { safe: 43.4, unsafe: 110 }
+    };
+    const thresholds = soilThresholds[parameter];
+    
+    // ✅ สร้าง annotations object
+    const annotations = {};
+    if (thresholds) {
+        annotations.safeLine = {
+            type: 'line', yMin: thresholds.safe, yMax: thresholds.safe,
+            borderColor: 'blue', borderWidth: 2, borderDash: [6, 6],
+            label: {
+                display: true, content: `ปลอดภัย: ≤ ${thresholds.safe}`,
+                position: 'start', backgroundColor: 'blue', color: 'white', font: { size: 10 }
+            }
+        };
+        annotations.unsafeLine = {
+            type: 'line', yMin: thresholds.unsafe, yMax: thresholds.unsafe,
+            borderColor: 'red', borderWidth: 2, borderDash: [6, 6],
+            label: {
+                display: true, content: `ไม่ปลอดภัย: ≥ ${thresholds.unsafe}`,
+                position: 'end', backgroundColor: 'red', color: 'white', font: { size: 10 }
+            }
+        };
+    }
+    
+    // ✅ แก้ไข: เพิ่ม "data:" ให้ถูกต้อง
+    soilChart = new Chart(ctx, {
+        type: 'line',
+        data: {  // ← ต้องมี key นี้
+            labels: labels,
+            datasets: [{
+                label: parameter,
+                data: data,
+                borderColor: 'rgb(118, 75, 162)',
+                backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                borderWidth: 2, tension: 0.4, fill: true,
+                pointRadius: 4, pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                annotation: { annotations: annotations }  // ✅ ใช้ annotations object ที่สร้างไว้
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'ค่า' } },
+                x: { title: { display: true, text: 'ครั้งที่ตรวจ' } }
+            }
+        }
+    });
+    console.log('Soil chart created successfully');
+}
+
+// ===== Event Listeners สำหรับกราฟ =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing chart handlers');
+    
+    // Water chart handlers
+    const waterSelect = document.getElementById('water-parameter-select');
+    const waterToggle = document.getElementById('water-chart-toggle');
+    const waterContainer = document.getElementById('water-chart-container');
+    
+    if (waterSelect && waterToggle) {
+        waterSelect.addEventListener('change', function() {
+            console.log('Water select changed:', this.value);
+            if (this.value) {
+                waterToggle.style.display = 'inline-block';
+                waterToggle.classList.remove('active');
+                // อย่าซ่อน container ทันที ให้รอ user กดปุ่ม
+                if (waterChart) { waterChart.destroy(); waterChart = null; }
+            } else {
+                waterToggle.style.display = 'none';
+                if (waterContainer) waterContainer.style.display = 'none';
+            }
+        });
+        
+        waterToggle.addEventListener('click', function() {
+            const param = waterSelect.value;
+            if (!param) return;
+            
+            console.log('Water toggle clicked, param:', param);
+            
+            if (this.classList.contains('active')) {
+                // ซ่อนกราฟ
+                this.classList.remove('active');
+                this.textContent = 'แสดงกราฟ';
+                if (waterContainer) waterContainer.style.display = 'none';
+            } else {
+                // แสดงกราฟ
+                this.classList.add('active');
+                this.textContent = 'ซ่อนกราฟ';
+                if (waterContainer) {
+                    waterContainer.style.display = 'block';
+                    // รอเล็กน้อยให้ container แสดงก่อนสร้างกราฟ
+                    setTimeout(() => createWaterChart(param), 50);
+                }
+            }
+        });
+    }
+    
+    // Soil chart handlers
+    const soilSelect = document.getElementById('soil-parameter-select');
+    const soilToggle = document.getElementById('soil-chart-toggle');
+    const soilContainer = document.getElementById('soil-chart-container');
+    
+    if (soilSelect && soilToggle) {
+        soilSelect.addEventListener('change', function() {
+            console.log('Soil select changed:', this.value);
+            if (this.value) {
+                soilToggle.style.display = 'inline-block';
+                soilToggle.classList.remove('active');
+                if (soilChart) { soilChart.destroy(); soilChart = null; }
+            } else {
+                soilToggle.style.display = 'none';
+                if (soilContainer) soilContainer.style.display = 'none';
+            }
+        });
+        
+        soilToggle.addEventListener('click', function() {
+            const param = soilSelect.value;
+            if (!param) return;
+            
+            console.log('Soil toggle clicked, param:', param);
+            
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                this.textContent = 'แสดงกราฟ';
+                if (soilContainer) soilContainer.style.display = 'none';
+            } else {
+                this.classList.add('active');
+                this.textContent = 'ซ่อนกราฟ';
+                if (soilContainer) {
+                    soilContainer.style.display = 'block';
+                    setTimeout(() => createSoilChart(param), 50);
+                }
+            }
+        });
+    }
+});
+
+// ===== Geolocation ผู้ใช้ =====
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(position => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        L.marker([userLat, userLng]).addTo(map).bindPopup("ตำแหน่งของคุณ").openPopup();
+        L.circle([userLat, userLng], {
+            radius: position.coords.accuracy,
+            color: '#49a061',
+            fillColor: '#49a061',
+            fillOpacity: 0.1
+        }).addTo(map);
+    }, error => console.log("Geolocation error:", error));
+}
+</script>
+</body>
+</html>
