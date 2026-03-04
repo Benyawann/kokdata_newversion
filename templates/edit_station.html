@@ -82,10 +82,22 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn-submit">บันทึกการแก้ไข</button>
+                <button type="submit" class="btn-submit" id="submitBtn">บันทึกการแก้ไข</button>
                 <a href="/station/{{ station.station }}" class="btn-reset">ยกเลิก</a>
             </div>
         </form>
+    </div>
+
+    <!-- ✅ Modal Popup -->
+    <div id="successModal" class="modal-overlay">
+        <div class="modal-container">
+            <div id="modalIcon" class="modal-icon success">✅</div>
+            <h3 id="modalTitle">แก้ไขสำเร็จ</h3>
+            <p id="modalMessage">ข้อมูลสถานี {{ station.station }} ถูกแก้ไขเรียบร้อยแล้ว</p>
+            <div class="modal-buttons">
+                <button id="modalBtn" class="btn-modal btn-modal-primary">ตกลง</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -196,6 +208,105 @@ function addColumn(type) {
         row.insertBefore(cell, row.children[row.children.length + lastCellIndex]);
     });
 }
+
+// ✅ ฟังก์ชันแสดง Modal Popup
+function showModal(type, title, message, onConfirm = null) {
+    const modal = document.getElementById('successModal');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalBtn = document.getElementById('modalBtn');
+    
+    if (!modal) {
+        console.error('❌ Modal element not found!');
+        return;
+    }
+    
+    if (type === 'success') {
+        modalIcon.textContent = '✅';
+        modalIcon.className = 'modal-icon success';
+    } else {
+        modalIcon.textContent = '❌';
+        modalIcon.className = 'modal-icon error';
+    }
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    
+    modal.classList.add('active');
+    
+    const handleConfirm = () => {
+        modal.classList.remove('active');
+        if (onConfirm) onConfirm();
+        cleanup();
+    };
+    
+    const cleanup = () => {
+        modalBtn?.removeEventListener('click', handleConfirm);
+        modal?.removeEventListener('click', handleOverlayClick);
+        document.removeEventListener('keydown', handleEsc);
+    };
+    
+    const handleOverlayClick = (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+            cleanup();
+        }
+    };
+    
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            modal.classList.remove('active');
+            cleanup();
+        }
+    };
+    
+    modalBtn?.addEventListener('click', handleConfirm);
+    modal?.addEventListener('click', handleOverlayClick);
+    document.addEventListener('keydown', handleEsc);
+}
+
+// ส่งฟอร์ม
+document.getElementById('stationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(document.getElementById('stationForm'));
+    formData.append('water_check_count', waterCheckColumns);
+    formData.append('soil_check_count', soilCheckColumns);
+    
+    // แสดงสถานะกำลังบันทึก
+    const submitBtn = document.getElementById('submitBtn');
+    const originalBtnText = submitBtn?.textContent || 'บันทึกการแก้ไข';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'กำลังบันทึก...';
+    }
+    
+    try {
+        const response = await fetch(`/edit-station/{{ station.station }}`, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            // ✅ แสดง Modal แทน alert()
+            showModal('success', 'แก้ไขสำเร็จ', 'ข้อมูลสถานี {{ station.station }} ถูกแก้ไขเรียบร้อยแล้ว', () => {
+                window.location.href = `/station/{{ station.station }}`;
+            });
+        } else {
+            showModal('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่ทราบสาเหตุ');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showModal('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } finally {
+        // คืนค่าปุ่ม
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
+        }
+    }
+});
 
 // === เริ่มต้น ===
 document.addEventListener('DOMContentLoaded', () => {
