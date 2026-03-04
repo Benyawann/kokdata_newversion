@@ -310,22 +310,195 @@
         {% endif %}
     </div>
 
+    <!-- ✅ Modal Confirm Delete Station -->
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-icon warning">⚠️</div>
+            <h3>ยืนยันการลบสถานี</h3>
+            <p id="deleteModalMessage">คุณต้องการลบสถานีนี้หรือไม่?<br>ข้อมูลทั้งหมดจะถูกลบอย่างถาวร</p>
+            <div class="modal-buttons">
+                <button id="deleteCancelBtn" class="btn-modal btn-modal-secondary">ยกเลิก</button>
+                <button id="deleteConfirmBtn" class="btn-modal btn-modal-danger">ลบสถานี</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Modal Success After Delete (ใหม่) -->
+    <div id="deleteSuccessModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-icon success">✅</div>
+            <h3>ลบสถานีสำเร็จ</h3>
+            <p id="deleteSuccessMessage">ลบสถานีเรียบร้อยแล้ว</p>
+            <div class="modal-buttons">
+                <button id="deleteSuccessBtn" class="btn-modal btn-modal-primary">ตกลง</button>
+            </div>
+        </div>
+    </div>
+    
 <script>
+// ✅ ฟังก์ชันแสดง Modal Confirm Delete
+function showDeleteModal(stationCode, onConfirm) {
+    const modal = document.getElementById('deleteModal');
+    const modalMessage = document.getElementById('deleteModalMessage');
+    const confirmBtn = document.getElementById('deleteConfirmBtn');
+    const cancelBtn = document.getElementById('deleteCancelBtn');
+    
+    // ตั้งค่าข้อความ
+    modalMessage.innerHTML = `คุณต้องการลบสถานี "<strong>${stationCode}</strong>" หรือไม่?<br>ข้อมูลทั้งหมดจะถูกลบอย่างถาวร`;
+    
+    // แสดง Modal
+    modal.classList.add('active');
+    
+    const handleConfirm = () => {
+        modal.classList.remove('active');
+        if (onConfirm) onConfirm();
+        cleanup();
+    };
+    
+    const handleCancel = () => {
+        modal.classList.remove('active');
+        cleanup();
+    };
+    
+    const handleOverlayClick = (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+            cleanup();
+        }
+    };
+    
+    const cleanup = () => {
+        confirmBtn?.removeEventListener('click', handleConfirm);
+        cancelBtn?.removeEventListener('click', handleCancel);
+        modal?.removeEventListener('click', handleOverlayClick);
+        document.removeEventListener('keydown', handleEsc);
+    };
+    
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            modal.classList.remove('active');
+            cleanup();
+        }
+    };
+    
+    confirmBtn?.addEventListener('click', handleConfirm);
+    cancelBtn?.addEventListener('click', handleCancel);
+    modal?.addEventListener('click', handleOverlayClick);
+    document.addEventListener('keydown', handleEsc);
+}
+
+// ✅ ฟังก์ชันแสดง Modal Confirm Delete
+function showDeleteModal(stationCode, onConfirm) {
+    const modal = document.getElementById('deleteModal');
+    const modalMessage = document.getElementById('deleteModalMessage');
+    const confirmBtn = document.getElementById('deleteConfirmBtn');
+    const cancelBtn = document.getElementById('deleteCancelBtn');
+    
+    modalMessage.innerHTML = `คุณต้องการลบสถานี "<strong>${stationCode}</strong>" หรือไม่?<br>ข้อมูลทั้งหมดจะถูกลบอย่างถาวร`;
+    modal.classList.add('active');
+    
+    const handleConfirm = () => {
+        modal.classList.remove('active');
+        if (onConfirm) onConfirm();
+        cleanup();
+    };
+    
+    const handleCancel = () => {
+        modal.classList.remove('active');
+        cleanup();
+    };
+    
+    const handleOverlayClick = (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+            cleanup();
+        }
+    };
+    
+    const cleanup = () => {
+        confirmBtn?.removeEventListener('click', handleConfirm);
+        cancelBtn?.removeEventListener('click', handleCancel);
+        modal?.removeEventListener('click', handleOverlayClick);
+        document.removeEventListener('keydown', handleEsc);
+    };
+    
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            modal.classList.remove('active');
+            cleanup();
+        }
+    };
+    
+    confirmBtn?.addEventListener('click', handleConfirm);
+    cancelBtn?.addEventListener('click', handleCancel);
+    modal?.addEventListener('click', handleOverlayClick);
+    document.addEventListener('keydown', handleEsc);
+}
+
+// ✅ ฟังก์ชันแสดง Modal Success After Delete
+function showDeleteSuccessModal(stationCode, onConfirm) {
+    const modal = document.getElementById('deleteSuccessModal');
+    const modalMessage = document.getElementById('deleteSuccessMessage');
+    const confirmBtn = document.getElementById('deleteSuccessBtn');
+    
+    modalMessage.textContent = `ลบสถานี "${stationCode}" เรียบร้อยแล้ว`;
+    modal.classList.add('active');
+    
+    const handleConfirm = () => {
+        modal.classList.remove('active');
+        if (onConfirm) onConfirm();
+        cleanup();
+    };
+    
+    const handleOverlayClick = (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+            if (onConfirm) onConfirm();
+            cleanup();
+        }
+    };
+    
+    const cleanup = () => {
+        confirmBtn?.removeEventListener('click', handleConfirm);
+        modal?.removeEventListener('click', handleOverlayClick);
+        document.removeEventListener('keydown', handleEsc);
+    };
+    
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            modal.classList.remove('active');
+            if (onConfirm) onConfirm();
+            cleanup();
+        }
+    };
+    
+    confirmBtn?.addEventListener('click', handleConfirm);
+    modal?.addEventListener('click', handleOverlayClick);
+    document.addEventListener('keydown', handleEsc);
+}
+
+// ✅ แก้ไขฟังก์ชัน deleteStation ให้ใช้ Modal ทั้ง Confirm และ Success
 function deleteStation(stationCode) {
-    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสถานี "${stationCode}"?`)) {
+    showDeleteModal(stationCode, () => {
         fetch(`/delete-station/${stationCode}`, {
             method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ ลบสถานีเรียบร้อยแล้ว');
-                window.location.href = '/'; // กลับไปหน้าหลัก
+                // ✅ แสดง Modal Success แทน alert()
+                showDeleteSuccessModal(stationCode, () => {
+                    window.location.href = '/'; // กลับไปหน้าหลัก
+                });
             } else {
                 alert('❌ เกิดข้อผิดพลาด: ' + data.message);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         });
-    }
+    });
 }
 </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
