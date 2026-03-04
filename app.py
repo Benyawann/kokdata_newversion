@@ -728,6 +728,30 @@ def check_env():
         "SECRET_KEY": "SET" if os.environ.get('SECRET_KEY') else "NOT SET"
     }
 
+@app.route('/map/<station_code>')
+def map_page(station_code):
+    # 1. ดึงข้อมูลสถานี
+    station = get_station_by_code(station_code)
+    if not station:
+        return "ไม่พบสถานี", 404
+    
+    # 2. ดึงข้อมูลน้ำและดิน
+    water_data = get_water_data(station_code)
+    soil_data = get_soil_data(station_code)
+    
+    # 3. Debug: พิมพ์ตรวจสอบข้อมูล (ลบออกเมื่อใช้งานจริง)
+    print(f"DEBUG map_page: station={station['station'] if station else None}")
+    print(f"DEBUG map_page: water_data keys={water_data.keys() if water_data else None}")
+    print(f"DEBUG map_page: soil_data keys={soil_data.keys() if soil_data else None}")
+    
+    # 4. ส่งข้อมูลไป template
+    return render_template(
+        'map.html',
+        station=station,      # ✅ ส่ง object ทั้งก้อน
+        water_data=water_data,
+        soil_data=soil_data
+    )
+
 # === Main Entry Point ===
 if __name__ == '__main__':
     # ✅ สร้างตารางถ้ายังไม่มี
