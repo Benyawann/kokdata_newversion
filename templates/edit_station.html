@@ -265,7 +265,7 @@ function showModal(type, title, message, onConfirm = null) {
     document.addEventListener('keydown', handleEsc);
 }
 
-// ส่งฟอร์ม
+// ✅ ส่งฟอร์ม - มีแค่หนึ่งเดียว และใช้ showModal()
 document.getElementById('stationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
