@@ -24,13 +24,23 @@
     </div>
 
     <div class="header">
-        <h1>รายละเอียดสถานี</h1>
-            <div class="station-code">{{ station.station }}</div>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
-                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกินค่ามาตรฐาน ข้อมูล ณ วันที่ 6 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 10px;">
+            <h1 style="margin: 0; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">รายละเอียดสถานี</h1>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <a href="/map/{{ station.station }}" class="edit-button" style="display: inline-flex; align-items: center; gap: 6px; 
+                padding:   8px 16px; background: #cd997a; color: white; border-radius: 20px; text-decoration: none; font-weight: 600;">
+                    <img src="/static/image/pin.png" alt="map" style="width: 18px; height: 18px;"> ดูแผนที่
+                </a>
+                <div class="station-code" style="margin: 0; background: #72C4C1; color: white; padding: 8px 20px; border-radius: 20px; 
+                font-weight: bold; font-size: 1.1em; font-family: 'Anuphan', sans-serif;">
+                {{ station.station }}
+                </div>
+            </div><!-- กล่องข้อมูลที่มา -->
+            <div style="background-color: #f8f9fa; padding: 15px; margin-top: 20px; margin-bottom: 20px; border-radius: 8px; 
+            border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
+                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกิน
+                ค่ามาตรฐาน ข้อมูล ณ วันที่ 6 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
             </div>
-
             <!-- รายละเอียดสถานี -->
             <div class="info-grid">
                 <!-- แม่น้ำ -->
@@ -65,6 +75,9 @@
                 <strong>&nbsp; ที่ตั้ง:</strong> {{ station.location }}
             </div>
         </div>
+    </div>
+
+    </div>
     </div>
     <!-- ส่วนผลคุณภาพน้ำ -->
     <div class="data-section">
