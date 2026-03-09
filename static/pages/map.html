@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แผนที่</title>
+
+    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan  :wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/map_style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css  " />
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js  "></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js  "></script>
+    
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-button">ย้อนกลับ</a>
+    
+    <!-- Header -->
+    <div class="station-header-map">
+        <h1>แผนที่</h1>
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="switchTab('water')" id="btn-water">💧 น้ำผิวดิน</button>
+            <button class="tab-btn" onclick="switchTab('sediment')" id="btn-sediment">🪨 ตะกอนดิน</button>
+        </div>
+    </div>
+
+    <!-- Alerts Section -->
+    <div id="dynamic-alerts" class="alerts-grid"></div>
+
+    <!-- Main Content -->
+    <div class="main-layout-report">
+        
+        <!-- Map Panel -->
+        <div class="map-panel-report">
+            <h3>🗺️ แผนที่จุดตรวจวัด</h3>
+            <div id="map"></div>
+        </div>
+
+        <!-- Chart Panel -->
+        <div class="chart-panel-report">
+            <h3>📊 แผนภูมิแท่งเปรียบเทียบข้อมูลล่าสุด</h3>
+
+            <!-- ✅ ตัวเลือกรอบตรวจวัด -->
+            <div class="filter-group" style="margin-bottom: 20px;">
+                <label for="check-select" >เลือกรอบตรวจวัด:</label>
+                    <select id="check-select"  onchange="updateChartByTambon()">
+                        <option value="latest">ครั้งล่าสุด</option>
+                        <!-- ตัวเลือกจะถูกเติมด้วย JavaScript -->
+                    </select>
+            </div>
+            
+            <!-- ตัวกรอง -->
+            <div class="filter-section">
+                <div class="filter-row-custom">
+                    <div class="filter-group">
+                        <label for="tambon-select">เลือกตำบล:</label>
+                        <select id="tambon-select" onchange="updateChartByTambon()">
+                            <option value="">กำลังโหลด...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="param-select">เลือกสิ่งที่ตรวจ:</label>
+                        <select id="param-select" onchange="updateChartByTambon()">
+                            <option value="">กำลังโหลด...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container-report">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+    </div>
+        
+    <!-- แหล่งข้อมูล -->
+    <div class="source-section">
+        <div class="source-card">
+            <div class="source-content">
+                <strong>อ้างอิงที่มา:</strong>
+                <p>สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อน สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js  "></script>
+
+<script>
+// ===== ข้อมูลสถานี =====
+const stationsInfo = [
+    { id: 'KK01', name: 'แม่น้ำกก (ชายแดนพม่า แม่อาย)', lat: 20.0902747, lon: 99.3534244, tambon: 'แม่อาย' },
+    { id: 'KK02', name: 'แม่น้ำกก (สะพานแม่นาวาง แม่อาย)', lat: 20.0477910, lon: 99.4049339, tambon: 'แม่อาย' },
+    { id: 'KK03', name: 'แม่น้ำกก (สะพานแม่สลัก แม่อาย)', lat: 20.0396223, lon: 99.4767091, tambon: 'แม่อาย' },
+    { id: 'KK04', name: 'แม่น้ำกก (บ้านจะเด้อ เมืองเชียงราย)', lat: 19.9741234, lon: 99.6569426, tambon: 'เวียง' },
+    { id: 'KK05', name: 'แม่น้ำกก (สะพานแม่ยาว)', lat: 19.9583819, lon: 99.6990780, tambon: 'แม่ยาว' },
+    { id: 'KK06', name: 'แม่น้ำกก (บ้านโป่งนาคำ)', lat: 19.9476028, lon: 99.7303040, tambon: 'รอบเวียง' },
+    { id: 'KK07', name: 'แม่น้ำกก (สะพานดอยฮาง)', lat: 19.9122599, lon: 99.7817370, tambon: 'ดอยฮาง' },
+    { id: 'KK08', name: 'แม่น้ำกก (ศาลากลางเชียงราย)', lat: 19.9226190, lon: 99.8185201, tambon: 'เวียง' },
+    { id: 'KK09', name: 'แม่น้ำกก (เฉลิมพระเกียรติ 1)', lat: 19.9247359, lon: 99.8624651, tambon: 'เวียง' },
+    { id: 'KK10', name: 'แม่น้ำกก (โยนกนาคนคร)', lat: 19.9257840, lon: 99.8970083, tambon: 'เวียง' },
+    { id: 'KK11', name: 'แม่น้ำกก (อ.แม่จัน)', lat: 19.96052, lon: 99.94629, tambon: 'แม่จัน' },
+    { id: 'KK12', name: 'แม่น้ำกก (สะพาน กรป. 92)', lat: 20.0336883, lon: 99.9637903, tambon: 'ท่าข้าวเปลือก' },
+    { id: 'KK13', name: 'แม่น้ำกก (ต.ท่าข้าวเปลือก)', lat: 20.1278600, lon: 100.0310000, tambon: 'ท่าข้าวเปลือก' },
+    { id: 'KK14', name: 'แม่น้ำกก (อ.แม่จัน)', lat: 20.177379, lon: 100.069326, tambon: 'แม่จัน' },
+    { id: 'KK15', name: 'แม่น้ำกก (ต.บ้านแซว)', lat: 20.2271399, lon: 100.1291002, tambon: 'บ้านแซว' },
+    { id: 'FA01', name: 'แม่น้ำฝาง (อ.แม่อาย)', lat: 20.0209934, lon: 99.3538415, tambon: 'แม่อาย' },
+    { id: 'KO01', name: 'แม่น้ำกรณ์ (ต.ท่าสาย)', lat: 19.8804804, lon: 99.8305029, tambon: 'ท่าสาย' },
+    { id: 'LA01', name: 'แม่น้ำลาว (ต.เวียงชัย)', lat: 19.8790354, lon: 99.8892302, tambon: 'เวียงชัย' },
+    { id: 'SU01', name: 'แม่น้ำสรวย (ต.แม่สรวย)', lat: 19.6569795, lon: 99.5440661, tambon: 'แม่สรวย' },
+    { id: 'SA01', name: 'แม่น้ำสาย (บ้านป่าซางงาม)', lat: 20.443851, lon: 99.874161, tambon: 'โป่งผา' },
+    { id: 'SA02', name: 'แม่น้ำสาย (มิตรภาพ 2)', lat: 20.4485278, lon: 99.9046667, tambon: 'แม่สาย' },
+    { id: 'SA03', name: 'แม่น้ำสาย (บ้านหัวฝาย)', lat: 20.460637, lon: 99.951040, tambon: 'แม่สาย' },
+    { id: 'RU01', name: 'แม่น้ำรวก (อ.แม่สาย 1)', lat: 20.4537562, lon: 99.9678833, tambon: 'แม่สาย' },
+    { id: 'RU02', name: 'แม่น้ำรวก (อ.แม่สาย 2)', lat: 20.3556721, lon: 100.0812816, tambon: 'ศรีดอนมูล' },
+    { id: 'NK01', name: 'แม่น้ำโขง (เชียงแสน)', lat: 20.3449038, lon: 100.0846274, tambon: 'เวียง' },
+    { id: 'NK02', name: 'แม่น้ำโขง (ต.เวียง)', lat: 20.2781699, lon: 100.0886618, tambon: 'เวียง' },
+    { id: 'NK03', name: 'แม่น้ำโขง (บ้านแซว)', lat: 20.2558231, lon: 100.1787482, tambon: 'บ้านแซว' }
+];
+
+// ===== ค่ามาตรฐาน =====
+// ===== ค่ามาตรฐาน (ใช้ชื่อภาษาไทยให้ตรงกับที่ API ส่งมา) =====
+const standards = {
+    water: { 
+        'สารหนู': 0.01, 'ตะกั่ว': 0.05, 'แคดเมียม': 0.005, 
+        'โครเมียม': 0.05, 'นิกเกิล': 1.0, 'ทองแดง': 0.1, 'สังกะสี': 1.0,
+        'ปรอท': 0.002, 'แมงกานีส': 1.0
+    },
+    sediment: {
+        'สารหนู':  { safe: 10, unsafe: 33 },
+        'ตะกั่ว':  { safe: 36, unsafe: 130 },
+        'แคดเมียม':  { safe: 1, unsafe: 5 },
+        'โครเมียม':  { safe: 43.4, unsafe: 110 },
+        'นิกเกิล':  { safe: 23, unsafe: 50 },
+        'ทองแดง':  { safe: 31.5, unsafe: 150 },
+        'สังกะสี':  { safe: 120, unsafe: 460 },
+        'ปรอท': { safe: 0.2, unsafe: 1.0 }
+    }
+};
+
+// ===== ตัวแปร global =====
+let currentTab = 'water';
+let chartInstance = null;
+let mapInstance = null;
+let markers = [];
+let tambonData = null;
+
+// ===== Register Chart.js plugin =====
+if (window['chartjs-plugin-annotation']) {
+    Chart.register(window['chartjs-plugin-annotation'].default || window['chartjs-plugin-annotation']);
+}
+
+// ===== ฟังก์ชันดึงข้อมูลจาก API =====
+async function fetchTambonData() {
+    try {
+        console.log('🔄 เรียก API /api/latest-by-tambon...');
+        const response = await fetch('/api/latest-by-tambon');
+        const result = await response.json();
+        console.log('📥 ผลลัพธ์ API:', result);
+        
+        if (result.success) {
+            tambonData = result;
+            populateTambonDropdown();
+            populateParamDropdown();
+            populateCheckDropdown();  // ✅ เพิ่ม: เติมตัวเลือก รอบตรวจวัด + แสดงจำนวนครั้ง
+            console.log('✅ โหลดข้อมูลตำบลสำเร็จ');
+            return true;
+        } else {
+            console.error('❌ API error:', result.error);
+        }
+    } catch (err) {
+        console.error('❌ Failed to fetch tambon data:', err);
+    }
+    return false;
+}
+
+// ===== Populate Tambon Dropdown =====
+function populateTambonDropdown() {
+    if (!tambonData || !tambonData.tambons) return;
+    const select = document.getElementById('tambon-select');
+    select.innerHTML = '<option value="all">ทุกตำบล (ภาพรวม)</option>';
+    tambonData.tambons.forEach(tambon => {
+        if (tambon) select.innerHTML += `<option value="${tambon}">${tambon}</option>`;
+    });
+}
+
+function populateParamDropdown() {
+    if (!tambonData) return;
+    const select = document.getElementById('param-select');
+    const params = currentTab === 'water' ? 
+        Object.keys(tambonData.water.parameters) : tambonData.soil.parameters;
+    
+    select.innerHTML = '';
+    params.forEach((param, index) => {
+        const unit = currentTab === 'water' ? `(${tambonData.water.parameters[param]})` : '(mg/kg)';
+        select.innerHTML += `<option value="${param}">${param} ${unit}</option>`;
+    });
+    
+    // ✅ เลือกพารามิเตอร์แรกเป็นค่าเริ่มต้น (ถ้ามี)
+    if (params.length > 0 && !select.value) {
+        select.value = params[0];
+    }
+}
+
+// ===== Populate Check Number Dropdown =====
+function populateCheckDropdown() {
+    if (!tambonData) return;
+    
+    const select = document.getElementById('check-select');
+    
+    const waterChecks = tambonData.water?.check_numbers || [];
+    const soilChecks = tambonData.soil?.check_numbers || [];
+    const currentChecks = currentTab === 'water' ? waterChecks : soilChecks;
+    
+    // ✅ ดึงค่าล่าสุดของประเภทข้อมูลปัจจุบัน
+    const latestCheck = currentTab === 'water' 
+        ? tambonData.water_latest_check 
+        : tambonData.soil_latest_check;
+    
+    // ✅ สร้างตัวเลือกแรกโดยแสดงค่าล่าสุดจากฐานข้อมูล
+    const latestText = latestCheck ? `${latestCheck} (ล่าสุด)` : 'กำลังโหลด...';
+    
+    const selectedValue = select.value;
+    select.innerHTML = `<option value="latest">${latestText}</option>`;  // ✅ แสดงค่าจริง
+    
+    if (currentChecks && Array.isArray(currentChecks)) {
+        // เรียงจากใหม่ไปเก่า (ไม่รวมค่าล่าสุดที่แสดงอยู่แล้ว)
+        [...currentChecks]
+            .filter(c => c !== latestCheck)  // ไม่ซ้ำกับตัวเลือกแรก
+            .reverse()
+            .forEach(check => {
+                select.innerHTML += `<option value="${check}">${check}</option>`;
+            });
+    }
+    
+    // คืนค่าที่เลือกเดิม ถ้ายังมีอยู่ในลิสต์
+    if (selectedValue && selectedValue !== 'latest' && currentChecks?.includes(selectedValue)) {
+        select.value = selectedValue;
+    }
+}
+
+// ===== Initialize Map =====
+function initMap() {
+    mapInstance = L.map('map').setView([20.0, 99.8], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors', maxZoom: 19
+    }).addTo(mapInstance);
+    updateMapMarkers();
+}
+
+async function updateMapMarkers() {
+    if (!mapInstance || !tambonData) {
+        console.log('⏳ Map or data not ready');
+        return;
+    }
+    
+    // ลบล้างมาร์คเกอร์เก่า
+    markers.forEach(m => mapInstance.removeLayer(m));
+    markers = [];
+    
+    const paramKey = document.getElementById('param-select').value;
+    const tambonFilter = document.getElementById('tambon-select').value;
+    const selectedCheck = document.getElementById('check-select').value;
+    const standard = standards[currentTab]?.[paramKey];
+    
+    if (!paramKey || !tambonData) return;
+    
+    let currentData;
+    
+    // ✅ ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
+    if (selectedCheck === 'latest') {
+        // ใช้ข้อมูลจาก tambonData (รอบล่าสุด)
+        currentData = currentTab === 'water' ? 
+            tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
+    } else {
+        // ✅ ดึงข้อมูลรอบย้อนหลังจาก API
+        try {
+            const response = await fetch(
+                `/api/data-by-check?check_number=${encodeURIComponent(selectedCheck)}&type=${currentTab}`
+            );
+            const result = await response.json();
+            
+            if (result.success) {
+                currentData = result.data[paramKey];
+            } else {
+                console.error('❌ Failed to fetch data:', result.error);
+                return;
+            }
+        } catch (err) {
+            console.error('❌ Error fetching data:', err);
+            return;
+        }
+    }
+    
+    if (!currentData) return;
+
+    stationsInfo.forEach(st => {
+        if (!st.lat || !st.lon) return;
+        if (tambonFilter !== 'all' && st.tambon !== tambonFilter) return;
+        
+        let isDanger = false;
+        let stationValue = null;
+        let checkNumber = selectedCheck === 'latest' ? 
+            (currentTab === 'water' ? tambonData.water_latest_check : tambonData.soil_latest_check) : 
+            selectedCheck;
+        
+        // ✅ ค้นหาข้อมูลในรอบที่เลือก
+        for (const tambon in currentData) {
+            const stationData = currentData[tambon].find(d => 
+                d.station === st.id && 
+                d.check_number === (selectedCheck === 'latest' ? checkNumber : selectedCheck)
+            );
+            
+            if (stationData && stationData.value !== null) {
+                stationValue = stationData.value;
+                checkNumber = stationData.check_number;
+                
+                // ✅ แยกการเปรียบเทียบน้ำและดิน
+                if (currentTab === 'water') {
+                    // 💧 น้ำ: เปรียบเทียบกับค่ามาตรฐานตัวเลขเดียว
+                    if (typeof standard === 'number' && stationValue > standard) {
+                        isDanger = true;
+                    }
+                } else {
+                    // 🪨 ดิน: เปรียบเทียบกับค่า { safe, unsafe }
+                    if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
+                        isDanger = true;  // >= unsafe → อันตราย (แดง)
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        // ✅ กำหนดสถานะมาร์คเกอร์
+        const markerClass = stationValue !== null ? (isDanger ? 'danger' : 'safe') : 'no-data';
+        
+        const customIcon = L.divIcon({ 
+            className: 'custom-marker', 
+            html: `<div class="marker-dot ${markerClass}"></div>`, 
+            iconSize: [20, 20], 
+            iconAnchor: [10, 10] 
+        });
+        
+        const marker = L.marker([st.lat, st.lon], { icon: customIcon }).addTo(mapInstance);
+        
+        // ✅ แสดงค่าพร้อมสัญลักษณ์ < > ใน popup
+        let rawValue = null;
+        if (stationValue !== null) {
+            for (const tambon in currentData) {
+                const stationData = currentData[tambon].find(s => s.station === st.id);
+                if (stationData?.raw_value) {
+                    rawValue = stationData.raw_value;
+                    break;
+                }
+            }
+            if (!rawValue) rawValue = stationValue;
+        }
+        const displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
+        const valueText = displayValue !== null ? `${displayValue}` : 'ไม่มีข้อมูล';
+        
+        const statusText = stationValue === null ? '⚪ ไม่มีข้อมูล' : (isDanger ? '🔴 เกินมาตรฐาน' : '🟢 ปกติ');
+        
+        marker.bindPopup(`
+            <div style="text-align:center;min-width:200px;padding:5px;">
+                <strong style="color:#2c3e50;">${st.name}</strong><br>
+                <span style="color:#666;font-size:0.9em;">${st.tambon}</span><br>
+                <span style="font-size:0.9em;color:#666;">${paramKey}: ${valueText}</span><br>
+                <span style="font-size:0.85em;color:#888;">${checkNumber}</span><br>
+                <span style="color:${isDanger ? '#e74c3c' : (stationValue !== null ? '#27ae60' : '#95a5a6')};font-weight:600;display:block;margin:5px 0;">${statusText}</span>
+                <strong style="color:#2c3e50;">${st.id}</strong><br>
+            </div>`);
+        
+        markers.push(marker);
+    });
+}
+
+// ===== สร้าง annotation สำหรับเส้นมาตรฐาน =====
+function createAnnotations(paramKey, dataType, unit) {
+    const annotations = {};
+    
+    // ✅ Mapping ชื่ออังกฤษ -> ไทย (ถ้า API ส่งภาษาอังกฤษมา)
+    const paramMap = {
+        'As': 'สารหนู', 'Pb': 'ตะกั่ว', 'Cd': 'แคดเมียม',
+        'Cr': 'โครเมียม', 'Ni': 'นิกเกิล', 'Cu': 'ทองแดง', 'Zn': 'สังกะสี'
+    };
+    const displayKey = paramMap[paramKey] || paramKey;
+    
+    // 💧 น้ำผิวดิน
+    if (dataType === 'water') {
+        const waterStandards = {
+            'สารหนู': 0.01, 'ตะกั่ว': 0.05, 'แคดเมียม': 0.005,
+            'โครเมียม': 0.05, 'นิกเกิล': 1.0, 'ทองแดง': 0.1, 'สังกะสี': 1.0,
+            'ปรอท': 0.002, 'แมงกานีส': 1.0
+        };
+        const stdValue = waterStandards[displayKey];
+        
+        if (stdValue !== undefined) {
+            annotations.standardLine = {
+                type: 'line',
+                yMin: stdValue, yMax: stdValue,
+                borderColor: '#e74c3c', borderWidth: 2, borderDash: [6, 6],
+                label: {
+                    display: true,
+                    content: `ค่ามาตรฐาน: ${stdValue}`,
+                    position: 'end',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    font: { size: 10, family: "'Noto Sans Thai', sans-serif" }
+                }
+            };
+        }
+    }
+    
+    // 🪨 ตะกอนดิน
+    else if (dataType === 'sediment') {
+        const sedimentStandards = {
+            'สารหนู': { safe: 10, unsafe: 33 },
+            'ตะกั่ว': { safe: 36, unsafe: 130 },
+            'แคดเมียม': { safe: 1, unsafe: 5 },
+            'โครเมียม': { safe: 43.4, unsafe: 110 },
+            'นิกเกิล': { safe: 23, unsafe: 50 },
+            'ทองแดง': { safe: 31.5, unsafe: 150 },
+            'สังกะสี': { safe: 120, unsafe: 460 },
+            'ปรอท': { safe: 0.2, unsafe: 1.0 }
+        };
+        const std = sedimentStandards[displayKey];
+        
+        if (std?.safe !== undefined) {
+            annotations.safeLine = {
+                type: 'line', yMin: std.safe, yMax: std.safe,
+                borderColor: '#3498db', borderWidth: 2, borderDash: [6, 6],
+                label: {
+                    display: true, content: `มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤${std.safe}`,
+                    position: 'start', backgroundColor: '#3498db',
+                    color: 'white', font: { size: 12, family: "'Noto Sans Thai', sans-serif" }
+                }
+            };
+            annotations.unsafeLine = {
+                type: 'line', yMin: std.unsafe, yMax: std.unsafe,
+                borderColor: '#e74c3c', borderWidth: 2, borderDash: [6, 6],
+                label: {
+                    display: true, content: `มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥${std.unsafe}`,
+                    position: 'end', backgroundColor: '#e74c3c',
+                    color: 'white', font: { size: 12, family: "'Noto Sans Thai', sans-serif" }
+                }
+            };
+        }
+    }
+    
+    return annotations;
+}
+
+// ===== Update Chart By Tambon =====
+async function updateChartByTambon() {
+    if (!tambonData) await fetchTambonData();
+    
+    const tambonKey = document.getElementById('tambon-select').value;
+    const paramKey = document.getElementById('param-select').value;
+    const selectedCheck = document.getElementById('check-select').value;
+    
+    if (!paramKey || !tambonData) return;
+    
+    let currentData;
+    let unit;
+    
+    // ✅ ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
+    if (selectedCheck === 'latest') {
+        // ใช้ข้อมูลจาก tambonData (รอบล่าสุด)
+        currentData = currentTab === 'water' ? 
+            tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
+        unit = currentTab === 'water' ? 
+            (tambonData.water.parameters[paramKey] || '') : 'mg/kg';
+    } else {
+        // ✅ ดึงข้อมูลรอบย้อนหลังจาก API
+        try {
+            const response = await fetch(
+                `/api/data-by-check?check_number=${encodeURIComponent(selectedCheck)}&type=${currentTab}`
+            );
+            const result = await response.json();
+            
+            if (result.success) {
+                currentData = result.data[paramKey];
+                unit = currentTab === 'water' ? 
+                    (result.parameters[paramKey] || '') : 'mg/kg';
+            } else {
+                console.error('❌ Failed to fetch data:', result.error);
+                return;
+            }
+        } catch (err) {
+            console.error('❌ Error fetching data:', err);
+            return;
+        }
+    }
+    
+    if (!currentData) return;
+    
+    const standardVal = standards[currentTab]?.[paramKey];
+    
+    // เตรียมข้อมูลสำหรับกราฟ
+    let datasetsToShow = [];
+    const colors = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6', '#e67e22', '#1abc9c', '#fd79a8'];
+    
+    if (tambonKey === 'all') {
+        const tambons = Object.keys(currentData).sort();
+        datasetsToShow = tambons.map((tambon, idx) => {
+            const stations = currentData[tambon];
+            const values = stations.map(s => s.value).filter(v => v !== null);
+            const avgValue = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+            return { 
+                label: tambon, 
+                data: [avgValue], 
+                backgroundColor: colors[idx % colors.length] + '80', 
+                borderColor: colors[idx % colors.length], 
+                borderWidth: 2, 
+                pointRadius: 0 
+            };
+        });
+    } else {
+        const stations = currentData[tambonKey] || [];
+        if (stations.length > 0) {
+            datasetsToShow = stations.map((station, idx) => ({
+                label: `${station.station}`, 
+                data: [station.value],
+                backgroundColor: colors[idx % colors.length] + '80', 
+                borderColor: colors[idx % colors.length], 
+                borderWidth: 2, 
+                pointRadius: 0
+            }));
+        }
+    }
+
+    // สร้าง annotation
+    const annotations = createAnnotations(paramKey, currentTab, standardVal, unit);
+    
+    // สร้างกราฟ
+    const ctx = document.getElementById('mainChart')?.getContext('2d');
+    if (!ctx) return;
+    if (chartInstance) chartInstance.destroy();
+    
+    const labels = datasetsToShow.map(ds => ds.label);
+    
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `${paramKey} (${unit})`,
+                data: datasetsToShow.map(ds => ds.data[0]),
+                backgroundColor: datasetsToShow.map(ds => ds.backgroundColor),
+                borderColor: datasetsToShow.map(ds => ds.borderColor),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { 
+                    callbacks: { 
+                        label: function(context) { 
+                            const val = context.parsed.y; 
+                            return `${val !== null ? val.toFixed(3) : '-'} ${unit}`; 
+                        } 
+                    } 
+                },
+                annotation: { annotations }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: standardVal ? (currentTab === 'water' ? standardVal * 1.5 : standardVal.unsafe * 1.2) : undefined,
+                    title: { 
+                        display: true, 
+                        text: `ค่า (${unit})`, 
+                        font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' } 
+                    }
+                },
+                x: {
+                    title: { 
+                        display: true, 
+                        text: tambonKey === 'all' ? 'ตำบล' : 'สถานี', 
+                        font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' } 
+                    },
+                    ticks: { maxRotation: 45, minRotation: 45 }
+                }
+            }
+        }
+    });
+    
+    updateMapMarkers();
+}
+
+// ===== Switch Tab =====
+function switchTab(mode) {
+    currentTab = mode;
+    document.getElementById('btn-water').classList.toggle('active', mode === 'water');
+    document.getElementById('btn-sediment').classList.toggle('active', mode === 'sediment');
+    populateParamDropdown();
+    populateCheckDropdown();
+    updateChartByTambon();
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📊 Tambon Chart page loaded');
+    
+    // ✅ 1. โหลดข้อมูลจาก API ก่อน
+    const dataLoaded = await fetchTambonData();
+    
+    if (dataLoaded) {
+        // ✅ 2. ตั้งค่าเริ่มต้นให้ dropdown มีค่าที่เลือก
+        const tambonSelect = document.getElementById('tambon-select');
+        const paramSelect = document.getElementById('param-select');
+        
+        if (tambonSelect.options.length > 1) {
+            tambonSelect.value = 'all';  // เลือก "ทุกตำบล" เป็นค่าเริ่มต้น
+        }
+        if (paramSelect.options.length > 0) {
+            paramSelect.value = paramSelect.options[0].value;  // เลือกพารามิเตอร์แรก
+        }
+        
+        // ✅ 3. สร้างแผนที่และอัปเดต
+        setTimeout(() => { 
+            initMap();
+            setTimeout(() => { 
+                if (mapInstance) mapInstance.invalidateSize(); 
+                updateMapMarkers();  // ✅ เรียกอีกครั้งเพื่อให้แน่ใจว่าแสดงครบ
+            }, 50); 
+        }, 25);
+        
+        // ✅ 4. อัปเดตแผนภูมิ
+        updateChartByTambon();
+    }
+    
+    window.addEventListener('resize', function() { 
+        if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 100); 
+    });
+});
+</script>
+</body>
+</html>
