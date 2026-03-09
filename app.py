@@ -10,11 +10,13 @@ from psycopg2.extras import RealDictCursor
 import os
 import secrets
 from dotenv import load_dotenv  # ← เพิ่มตรงนี้
+from datetime import datetime
 
 load_dotenv()  # ← โหลดทันทีหลัง import
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
+app.config['JSON_AS_ASCII'] = False
 
 # === Register API Blueprint ===
 from api.index import api_bp
@@ -775,6 +777,368 @@ def map_page(station_code):
         soil_data=soil_data
     )
 
+# === API: Get All Monitoring Data for Map ===
+@app.route('/api/map-data')
+def api_map_data():
+    """ส่งข้อมูลน้ำและดินทั้งหมดในรูปแบบ JSON สำหรับแผนที่"""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # ดึง check_numbers ทั้งหมด (เรียงลำดับ)
+        cur.execute("""
+            SELECT DISTINCT check_number 
+            FROM water_data 
+            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+        """)
+        water_checks = [row['check_number'] for row in cur.fetchall()]
+        
+        cur.execute("""
+            SELECT DISTINCT check_number 
+            FROM soil_data 
+            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+        """)
+        soil_checks = [row['check_number'] for row in cur.fetchall()]
+        
+        # ดึงพารามิเตอร์
+        cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
+        water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
+        
+        cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
+        soil_params = [row['parameter'] for row in cur.fetchall()]
+        
+        # ดึงข้อมูลน้ำ: {parameter: {station: [values]}}
+        water_data = {}
+        for param in water_params:
+            water_data[param] = {}
+            cur.execute("""
+                SELECT station, check_number, numeric_value 
+                FROM water_data 
+                WHERE parameter = %s AND numeric_value IS NOT NULL
+                ORDER BY station, NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+            """, (param,))
+            rows = cur.fetchall()
+            for row in rows:
+                st = row['station']
+                val = row['numeric_value']
+                if st not in water_data[param]:
+                    water_data[param][st] = [None] * len(water_checks)
+                try:
+                    idx = water_checks.index(row['check_number'])
+                    water_data[param][st][idx] = val
+                except ValueError:
+                    pass
+        
+        # ดึงข้อมูลดิน
+        soil_data = {}
+        for param in soil_params:
+            soil_data[param] = {}
+            cur.execute("""
+                SELECT station, check_number, numeric_value 
+                FROM soil_data 
+                WHERE parameter = %s AND numeric_value IS NOT NULL
+                ORDER BY station, NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+            """, (param,))
+            rows = cur.fetchall()
+            for row in rows:
+                st = row['station']
+                val = row['numeric_value']
+                if st not in soil_data[param]:
+                    soil_data[param][st] = [None] * len(soil_checks)
+                try:
+                    idx = soil_checks.index(row['check_number'])
+                    soil_data[param][st][idx] = val
+                except ValueError:
+                    pass
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'water': {
+                'check_numbers': water_checks,
+                'parameters': water_params,
+                'data': water_data
+            },
+            'soil': {
+                'check_numbers': soil_checks,
+                'parameters': soil_params,
+                'data': soil_data
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+# === API: Get Latest Data for Map Chart ===
+@app.route('/api/map-latest-data')
+def api_map_latest_data():
+    """ส่งข้อมูลค่าล่าสุดของแต่ละสถานี สำหรับแสดงกราฟ"""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # ✅ ดึงพารามิเตอร์น้ำพร้อมหน่วย
+        cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
+        water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
+        
+        # ✅ ดึงพารามิเตอร์ดิน
+        cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
+        soil_params = [row['parameter'] for row in cur.fetchall()]
+        
+        # ✅ ดึงค่าล่าสุดของน้ำ (ใช้ DISTINCT ON + ORDER BY เพื่อเอาแถวสุดท้าย)
+        water_latest = {}
+        for param in water_params:
+            cur.execute("""
+                SELECT DISTINCT ON (station) 
+                    station, check_number, numeric_value, value
+                FROM water_data 
+                WHERE parameter = %s AND numeric_value IS NOT NULL
+                ORDER BY station, 
+                         NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
+                         check_number DESC
+            """, (param,))
+            rows = cur.fetchall()
+            water_latest[param] = {}
+            for row in rows:
+                if row['numeric_value'] is not None:
+                    water_latest[param][row['station']] = {
+                        'value': row['numeric_value'],
+                        'raw_value': row['value'],
+                        'check_number': row['check_number']
+                    }
+        
+        # ✅ ดึงค่าล่าสุดของดิน
+        soil_latest = {}
+        for param in soil_params:
+            cur.execute("""
+                SELECT DISTINCT ON (station) 
+                    station, check_number, numeric_value, value
+                FROM soil_data 
+                WHERE parameter = %s AND numeric_value IS NOT NULL
+                ORDER BY station, 
+                         NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
+                         check_number DESC
+            """, (param,))
+            rows = cur.fetchall()
+            soil_latest[param] = {}
+            for row in rows:
+                if row['numeric_value'] is not None:
+                    soil_latest[param][row['station']] = {
+                        'value': row['numeric_value'],
+                        'raw_value': row['value'],
+                        'check_number': row['check_number']
+                    }
+        
+        conn.close()
+        
+        response = {
+            'success': True,
+            'water': {
+                'parameters': water_params,
+                'latest': water_latest
+            },
+            'soil': {
+                'parameters': soil_params,
+                'latest': soil_latest
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        print(f"❌ API Latest Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/api/latest-by-tambon')
+def api_latest_by_tambon():
+    """ดึงข้อมูลล่าสุดจัดกลุ่มตามตำบล (เฉพาะรอบล่าสุดเท่านั้น)"""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # ดึงข้อมูลสถานีพร้อมตำบล
+        cur.execute("""
+            SELECT station, tambon, amphoe, province, river, location
+            FROM station_data
+            ORDER BY tambon, station
+        """)
+        stations = cur.fetchall()
+        
+        # ดึงพารามิเตอร์น้ำ
+        cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
+        water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
+        
+        # ดึงพารามิเตอร์ดิน
+        cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
+        soil_params = [row['parameter'] for row in cur.fetchall()]
+        
+        # ✅ 1. หารอบตรวจวัดล่าสุดของน้ำ
+        cur.execute("""
+            SELECT check_number
+            FROM water_data
+            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
+            check_number DESC
+            LIMIT 1
+        """)
+        water_check_row = cur.fetchone()
+        water_latest_check = water_check_row['check_number'] if water_check_row else None
+        
+        # ✅ 2. หารอบตรวจวัดล่าสุดของดิน
+        cur.execute("""
+            SELECT check_number
+            FROM soil_data
+            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
+            check_number DESC
+            LIMIT 1
+        """)
+        soil_check_row = cur.fetchone()
+        soil_latest_check = soil_check_row['check_number'] if soil_check_row else None
+        
+        # ✅ 3. กรณีไม่มีข้อมูลเลย - ส่งโครงสร้างว่างสำหรับแสดงแผนภูมิ
+        if not water_latest_check and not soil_latest_check:
+            tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
+            conn.close()
+            return jsonify({
+                'success': True,
+                'latest_check_number': None,
+                'water_latest_check': None,
+                'soil_latest_check': None,
+                'tambons': tambons,
+                'stations': stations,
+                'water': {'parameters': water_params, 'latest': {}},
+                'soil': {'parameters': soil_params, 'latest': {}},
+                'message': 'ยังไม่มีข้อมูลการตรวจวัด'
+            })
+        
+        print(f"✅ รอบตรวจวัดล่าสุด - น้ำ: {water_latest_check}, ดิน: {soil_latest_check}")
+        
+        # ✅ 4. ดึงข้อมูลน้ำเฉพาะรอบล่าสุดเท่านั้น
+        water_latest = {}
+        if water_latest_check:
+            for param in water_params:
+                water_latest[param] = {}
+                cur.execute("""
+                    SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
+                    FROM water_data wd
+                    JOIN station_data sd ON wd.station = sd.station
+                    WHERE wd.parameter = %s
+                    AND wd.check_number = %s
+                    AND wd.numeric_value IS NOT NULL
+                """, (param, water_latest_check))
+                rows = cur.fetchall()
+                for row in rows:
+                    tambon = row['tambon'] or 'ไม่ระบุ'
+                    if tambon not in water_latest[param]:
+                        water_latest[param][tambon] = []
+                    
+                    # ✅ แยกค่าตัวเลขและสัญลักษณ์ < >
+                    raw_val = row['value'] or ''
+                    numeric_val = row['numeric_value']
+                    prefix = ''
+                    if raw_val.startswith('<'):
+                        prefix = '<'
+                        if numeric_val is None:
+                            try:
+                                numeric_val = float(raw_val.replace('<', '').strip())
+                            except:
+                                numeric_val = 0.0
+                    elif raw_val.startswith('>'):
+                        prefix = '>'
+                        if numeric_val is None:
+                            try:
+                                numeric_val = float(raw_val.replace('>', '').strip())
+                            except:
+                                numeric_val = 0.0
+                    
+                    water_latest[param][tambon].append({
+                        'station': row['station'],
+                        'value': float(numeric_val) if numeric_val is not None else None,
+                        'raw_value': raw_val,
+                        'prefix': prefix,  # ✅ เพิ่มสัญลักษณ์ < หรือ >
+                        'check_number': row['check_number']
+                    })
+        
+        # ✅ 5. ดึงข้อมูลดินเฉพาะรอบล่าสุดเท่านั้น
+        soil_latest = {}
+        if soil_latest_check:
+            for param in soil_params:
+                soil_latest[param] = {}
+                cur.execute("""
+                    SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
+                    FROM soil_data sd
+                    JOIN station_data st ON sd.station = st.station
+                    WHERE sd.parameter = %s
+                    AND sd.check_number = %s
+                    AND sd.numeric_value IS NOT NULL
+                """, (param, soil_latest_check))
+                rows = cur.fetchall()
+                for row in rows:
+                    tambon = row['tambon'] or 'ไม่ระบุ'
+                    if tambon not in soil_latest[param]:
+                        soil_latest[param][tambon] = []
+                    
+                    # ✅ แยกค่าตัวเลขและสัญลักษณ์ < > (ทำเหมือนกันกับน้ำ)
+                    raw_val = row['value'] or ''
+                    numeric_val = row['numeric_value']
+                    prefix = ''
+                    if raw_val.startswith('<'):
+                        prefix = '<'
+                        if numeric_val is None:
+                            try:
+                                numeric_val = float(raw_val.replace('<', '').strip())
+                            except:
+                                numeric_val = 0.0
+                    elif raw_val.startswith('>'):
+                        prefix = '>'
+                        if numeric_val is None:
+                            try:
+                                numeric_val = float(raw_val.replace('>', '').strip())
+                            except:
+                                numeric_val = 0.0
+                    
+                    soil_latest[param][tambon].append({
+                        'station': row['station'],
+                        'value': float(numeric_val) if numeric_val is not None else None,
+                        'raw_value': raw_val,
+                        'prefix': prefix,  # ✅ เพิ่มสัญลักษณ์ < หรือ >
+                        'check_number': row['check_number']
+                    })
+        
+        # รวบรวมรายชื่อตำบลทั้งหมด
+        tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'latest_check_number': water_latest_check or soil_latest_check,
+            'water_latest_check': water_latest_check,
+            'soil_latest_check': soil_latest_check,
+            'tambons': tambons,
+            'stations': stations,
+            'water': {
+                'parameters': water_params,
+                'latest': water_latest
+            },
+            'soil': {
+                'parameters': soil_params,
+                'latest': soil_latest
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ API Tambon Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
 # === Main Entry Point ===
 if __name__ == '__main__':
     # ✅ สร้างตารางถ้ายังไม่มี
