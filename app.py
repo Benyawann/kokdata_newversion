@@ -958,7 +958,7 @@ def api_map_latest_data():
     
 @app.route('/api/latest-by-tambon')
 def api_latest_by_tambon():
-    """ดึงข้อมูลล่าสุดจัดกลุ่มตามตำบล (เฉพาะรอบล่าสุดเท่านั้น)"""
+    """ดึงข้อมูลล่าสุดจัดกลุ่มตามตำบล + รายการรอบตรวจวัดทั้งหมด"""
     try:
         conn = get_db()
         cur = conn.cursor()
@@ -979,47 +979,58 @@ def api_latest_by_tambon():
         cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
         soil_params = [row['parameter'] for row in cur.fetchall()]
         
-        # ✅ 1. หารอบตรวจวัดล่าสุดของน้ำ
+        # ✅ 1. ดึง check_numbers ทั้งหมดของน้ำ (เรียงจากใหม่ไปเก่า)
         cur.execute("""
-            SELECT check_number
+        SELECT check_number
+        FROM (
+            SELECT DISTINCT check_number,
+                    NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER as sort_key
             FROM water_data
-            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
-            check_number DESC
-            LIMIT 1
+        ) AS temp
+        ORDER BY sort_key DESC NULLS LAST, check_number DESC
         """)
-        water_check_row = cur.fetchone()
-        water_latest_check = water_check_row['check_number'] if water_check_row else None
+        water_checks = [row['check_number'] for row in cur.fetchall()]
         
-        # ✅ 2. หารอบตรวจวัดล่าสุดของดิน
+        # ✅ 2. ดึง check_numbers ทั้งหมดของดิน (เรียงจากใหม่ไปเก่า)
+        # ✅ ดึง check_numbers ทั้งหมดของดิน
         cur.execute("""
-            SELECT check_number
+        SELECT check_number
+        FROM (
+            SELECT DISTINCT check_number,
+                    NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER as sort_key
             FROM soil_data
-            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
-            check_number DESC
-            LIMIT 1
+        ) AS temp
+        ORDER BY sort_key DESC NULLS LAST, check_number DESC
         """)
-        soil_check_row = cur.fetchone()
-        soil_latest_check = soil_check_row['check_number'] if soil_check_row else None
+        soil_checks = [row['check_number'] for row in cur.fetchall()]
         
-        # ✅ 3. กรณีไม่มีข้อมูลเลย - ส่งโครงสร้างว่างสำหรับแสดงแผนภูมิ
+        # ✅ 3. หารอบตรวจวัดล่าสุดของน้ำและดิน
+        water_latest_check = water_checks[0] if water_checks else None
+        soil_latest_check = soil_checks[0] if soil_checks else None
+        
+        # ✅ 4. กรณีไม่มีข้อมูลเลย
         if not water_latest_check and not soil_latest_check:
             tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
             conn.close()
             return jsonify({
                 'success': True,
-                'latest_check_number': None,
                 'water_latest_check': None,
                 'soil_latest_check': None,
                 'tambons': tambons,
                 'stations': stations,
-                'water': {'parameters': water_params, 'latest': {}},
-                'soil': {'parameters': soil_params, 'latest': {}},
-                'message': 'ยังไม่มีข้อมูลการตรวจวัด'
+                'water': {
+                    'parameters': water_params,
+                    'latest': {},
+                    'check_numbers': []  # ✅ ส่งรายการว่าง
+                },
+                'soil': {
+                    'parameters': soil_params,
+                    'latest': {},
+                    'check_numbers': []  # ✅ ส่งรายการว่าง
+                }
             })
         
-        print(f"✅ รอบตรวจวัดล่าสุด - น้ำ: {water_latest_check}, ดิน: {soil_latest_check}")
-        
-        # ✅ 4. ดึงข้อมูลน้ำเฉพาะรอบล่าสุดเท่านั้น
+        # ✅ 5. ดึงข้อมูลน้ำเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
         water_latest = {}
         if water_latest_check:
             for param in water_params:
@@ -1028,44 +1039,34 @@ def api_latest_by_tambon():
                     SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
                     FROM water_data wd
                     JOIN station_data sd ON wd.station = sd.station
-                    WHERE wd.parameter = %s
-                    AND wd.check_number = %s
-                    AND wd.numeric_value IS NOT NULL
+                    WHERE wd.parameter = %s AND wd.check_number = %s AND wd.numeric_value IS NOT NULL
                 """, (param, water_latest_check))
-                rows = cur.fetchall()
-                for row in rows:
+                for row in cur.fetchall():
                     tambon = row['tambon'] or 'ไม่ระบุ'
                     if tambon not in water_latest[param]:
                         water_latest[param][tambon] = []
-                    
-                    # ✅ แยกค่าตัวเลขและสัญลักษณ์ < >
                     raw_val = row['value'] or ''
                     numeric_val = row['numeric_value']
                     prefix = ''
                     if raw_val.startswith('<'):
                         prefix = '<'
                         if numeric_val is None:
-                            try:
-                                numeric_val = float(raw_val.replace('<', '').strip())
-                            except:
-                                numeric_val = 0.0
+                            try: numeric_val = float(raw_val.replace('<', '').strip())
+                            except: numeric_val = 0.0
                     elif raw_val.startswith('>'):
                         prefix = '>'
                         if numeric_val is None:
-                            try:
-                                numeric_val = float(raw_val.replace('>', '').strip())
-                            except:
-                                numeric_val = 0.0
-                    
+                            try: numeric_val = float(raw_val.replace('>', '').strip())
+                            except: numeric_val = 0.0
                     water_latest[param][tambon].append({
                         'station': row['station'],
                         'value': float(numeric_val) if numeric_val is not None else None,
                         'raw_value': raw_val,
-                        'prefix': prefix,  # ✅ เพิ่มสัญลักษณ์ < หรือ >
+                        'prefix': prefix,
                         'check_number': row['check_number']
                     })
         
-        # ✅ 5. ดึงข้อมูลดินเฉพาะรอบล่าสุดเท่านั้น
+        # ✅ 6. ดึงข้อมูลดินเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
         soil_latest = {}
         if soil_latest_check:
             for param in soil_params:
@@ -1074,62 +1075,51 @@ def api_latest_by_tambon():
                     SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
                     FROM soil_data sd
                     JOIN station_data st ON sd.station = st.station
-                    WHERE sd.parameter = %s
-                    AND sd.check_number = %s
-                    AND sd.numeric_value IS NOT NULL
+                    WHERE sd.parameter = %s AND sd.check_number = %s AND sd.numeric_value IS NOT NULL
                 """, (param, soil_latest_check))
-                rows = cur.fetchall()
-                for row in rows:
+                for row in cur.fetchall():
                     tambon = row['tambon'] or 'ไม่ระบุ'
                     if tambon not in soil_latest[param]:
                         soil_latest[param][tambon] = []
-                    
-                    # ✅ แยกค่าตัวเลขและสัญลักษณ์ < > (ทำเหมือนกันกับน้ำ)
                     raw_val = row['value'] or ''
                     numeric_val = row['numeric_value']
                     prefix = ''
                     if raw_val.startswith('<'):
                         prefix = '<'
                         if numeric_val is None:
-                            try:
-                                numeric_val = float(raw_val.replace('<', '').strip())
-                            except:
-                                numeric_val = 0.0
+                            try: numeric_val = float(raw_val.replace('<', '').strip())
+                            except: numeric_val = 0.0
                     elif raw_val.startswith('>'):
                         prefix = '>'
                         if numeric_val is None:
-                            try:
-                                numeric_val = float(raw_val.replace('>', '').strip())
-                            except:
-                                numeric_val = 0.0
-                    
+                            try: numeric_val = float(raw_val.replace('>', '').strip())
+                            except: numeric_val = 0.0
                     soil_latest[param][tambon].append({
                         'station': row['station'],
                         'value': float(numeric_val) if numeric_val is not None else None,
                         'raw_value': raw_val,
-                        'prefix': prefix,  # ✅ เพิ่มสัญลักษณ์ < หรือ >
+                        'prefix': prefix,
                         'check_number': row['check_number']
                     })
         
-        # รวบรวมรายชื่อตำบลทั้งหมด
         tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
-        
         conn.close()
         
         return jsonify({
             'success': True,
-            'latest_check_number': water_latest_check or soil_latest_check,
             'water_latest_check': water_latest_check,
             'soil_latest_check': soil_latest_check,
             'tambons': tambons,
             'stations': stations,
             'water': {
                 'parameters': water_params,
-                'latest': water_latest
+                'latest': water_latest,
+                'check_numbers': water_checks  # ✅ เพิ่ม: รายการรอบตรวจวัดของน้ำ
             },
             'soil': {
                 'parameters': soil_params,
-                'latest': soil_latest
+                'latest': soil_latest,
+                'check_numbers': soil_checks  # ✅ เพิ่ม: รายการรอบตรวจวัดของดิน
             }
         })
         
@@ -1138,7 +1128,136 @@ def api_latest_by_tambon():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-    
+
+@app.route('/api/data-by-check')
+def api_data_by_check():
+    """ดึงข้อมูลตามรอบตรวจวัดที่ระบุ"""
+    try:
+        check_number = request.args.get('check_number')
+        data_type = request.args.get('type', 'water')  # 'water' หรือ 'soil'
+        
+        if not check_number:
+            return jsonify({'success': False, 'error': 'กรุณาระบุรอบตรวจวัด'}), 400
+        
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # ดึงข้อมูลสถานีพร้อมตำบล
+        cur.execute("""
+            SELECT station, tambon, amphoe, province, river, location
+            FROM station_data
+            ORDER BY tambon, station
+        """)
+        stations = cur.fetchall()
+        
+        if data_type == 'water':
+            # ดึงพารามิเตอร์น้ำ
+            cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
+            params = {row['parameter']: row['unit'] for row in cur.fetchall()}
+            
+            # ดึงข้อมูลน้ำตามรอบตรวจวัด
+            data_by_param = {}
+            for param in params:
+                data_by_param[param] = {}
+                cur.execute("""
+                    SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
+                    FROM water_data wd
+                    JOIN station_data sd ON wd.station = sd.station
+                    WHERE wd.parameter = %s
+                    AND wd.check_number = %s
+                    AND wd.numeric_value IS NOT NULL
+                """, (param, check_number))
+                
+                for row in cur.fetchall():
+                    tambon = row['tambon'] or 'ไม่ระบุ'
+                    if tambon not in data_by_param[param]:
+                        data_by_param[param][tambon] = []
+                    
+                    raw_val = row['value'] or ''
+                    numeric_val = row['numeric_value']
+                    prefix = ''
+                    if raw_val.startswith('<'):
+                        prefix = '<'
+                        if numeric_val is None:
+                            try: numeric_val = float(raw_val.replace('<', '').strip())
+                            except: numeric_val = 0.0
+                    elif raw_val.startswith('>'):
+                        prefix = '>'
+                        if numeric_val is None:
+                            try: numeric_val = float(raw_val.replace('>', '').strip())
+                            except: numeric_val = 0.0
+                    
+                    data_by_param[param][tambon].append({
+                        'station': row['station'],
+                        'value': float(numeric_val) if numeric_val is not None else None,
+                        'raw_value': raw_val,
+                        'prefix': prefix,
+                        'check_number': row['check_number']
+                    })
+        else:
+            # ดึงพารามิเตอร์ดิน
+            cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
+            params = [row['parameter'] for row in cur.fetchall()]
+            
+            # ดึงข้อมูลดินตามรอบตรวจวัด
+            data_by_param = {}
+            for param in params:
+                data_by_param[param] = {}
+                cur.execute("""
+                    SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
+                    FROM soil_data sd
+                    JOIN station_data st ON sd.station = st.station
+                    WHERE sd.parameter = %s
+                    AND sd.check_number = %s
+                    AND sd.numeric_value IS NOT NULL
+                """, (param, check_number))
+                
+                for row in cur.fetchall():
+                    tambon = row['tambon'] or 'ไม่ระบุ'
+                    if tambon not in data_by_param[param]:
+                        data_by_param[param][tambon] = []
+                    
+                    raw_val = row['value'] or ''
+                    numeric_val = row['numeric_value']
+                    prefix = ''
+                    if raw_val.startswith('<'):
+                        prefix = '<'
+                        if numeric_val is None:
+                            try: numeric_val = float(raw_val.replace('<', '').strip())
+                            except: numeric_val = 0.0
+                    elif raw_val.startswith('>'):
+                        prefix = '>'
+                        if numeric_val is None:
+                            try: numeric_val = float(raw_val.replace('>', '').strip())
+                            except: numeric_val = 0.0
+                    
+                    data_by_param[param][tambon].append({
+                        'station': row['station'],
+                        'value': float(numeric_val) if numeric_val is not None else None,
+                        'raw_value': raw_val,
+                        'prefix': prefix,
+                        'check_number': row['check_number']
+                    })
+        
+        tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'check_number': check_number,
+            'type': data_type,
+            'tambons': tambons,
+            'stations': stations,
+            'data': data_by_param,
+            'parameters': params
+        })
+        
+    except Exception as e:
+        print(f"❌ API Data By Check Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+        
 # === Main Entry Point ===
 if __name__ == '__main__':
     # ✅ สร้างตารางถ้ายังไม่มี
