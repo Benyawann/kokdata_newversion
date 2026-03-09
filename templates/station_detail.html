@@ -24,13 +24,19 @@
     </div>
 
     <div class="header">
-        <h1>รายละเอียดสถานี</h1>
-            <div class="station-code">{{ station.station }}</div>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
-                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกินค่ามาตรฐาน ข้อมูล ณ วันที่ 29 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 10px;">
+            <h1 style="margin: 0; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">รายละเอียดสถานี</h1>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div class="station-code" style="margin: 0; background: #72C4C1; color: white; padding: 8px 20px; border-radius: 20px; 
+                font-weight: bold; font-size: 1.1em; font-family: 'Anuphan', sans-serif;">
+                {{ station.station }}
+                </div>
+            </div><!-- กล่องข้อมูลที่มา -->
+            <div style="background-color: #f8f9fa; padding: 15px; margin-top: 20px; margin-bottom: 20px; border-radius: 8px; 
+            border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
+                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกิน
+                ค่ามาตรฐาน ข้อมูล ณ วันที่ 29 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
             </div>
-
             <!-- รายละเอียดสถานี -->
             <div class="info-grid">
                 <!-- แม่น้ำ -->
@@ -65,6 +71,9 @@
                 <strong>&nbsp; ที่ตั้ง:</strong> {{ station.location }}
             </div>
         </div>
+    </div>
+
+    </div>
     </div>
     <!-- ส่วนผลคุณภาพน้ำ -->
     <div class="data-section">
@@ -166,7 +175,7 @@
         </div>
 
         <div class="period-note">
-            <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างน้ำในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคม 2568 ถึงเดือนมกราคม 2569 ดังนี้<br>
+            <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างน้ำในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคม 2568ถึงเดือนมกราคม 2569 ดังนี้<br>
                 ▪ <strong>ครั้งที่ 1</strong> เมื่อวันที่ 19 - 24 มีนาคม 2568 และวันที่ 9 เมษายน 2568<br>
                 ▪ <strong>ครั้งที่ 2</strong> เมื่อวันที่ 21 - 24 เมษายน 2568 และวันที่ 29 เมษายน - 2 พฤษภาคม 2568<br>
                 ▪ <strong>ครั้งที่ 3</strong> เมื่อวันที่ 12 - 16 พฤษภาคม 2568<br>
@@ -181,8 +190,7 @@
                 ▪ <strong>ครั้งที่ 12</strong> เมื่อวันที่ 22 – 26 กันยายน 2568<br>
                 ▪ <strong>ครั้งที่ 13</strong> เมื่อวันที่ 4 – 27 พฤศจิกายน 2568<br>
                 ▪ <strong>ครั้งที่ 14</strong> เมื่อวันที่ 22 – 26 ธันวาคม 2568<br>
-                ▪ <strong>ครั้งที่ 15</strong> เมื่อวันที่ 13 – 16 มกราคม 2569
-
+                ▪ <strong>ครั้งที่ 15</strong> เมื่อวันที่ 13 มกราคม 2569 – 16 มกราคม 2569
         </div>
         {% else %}
             <div class="no-data">ไม่มีข้อมูลคุณภาพน้ำ</div>
@@ -304,7 +312,7 @@
                     ▪ <strong>ครั้งที่ 6</strong> เมื่อวันที่ 18 – 22 สิงหาคม 2568<br>
                     ▪ <strong>ครั้งที่ 7</strong> เมื่อวันที่ 22 – 26 กันยายน 2568<br>
                     ▪ <strong>ครั้งที่ 8</strong> เมื่อวันที่ 11 – 14 พฤศจิกายน 2568<br>
-                    ▪ <strong>ครั้งที่ 9</strong> เมื่อวันที่ 6 – 9 มกราคม 2569
+                     ▪ <strong>ครั้งที่ 9</strong> เมื่อวันที่ 6 – 9 มกราคม 2569
                 </div>
             </div>
         {% else %}
@@ -312,7 +320,7 @@
         {% endif %}
     </div>
 
-    <!-- ✅ Modal Confirm Delete Station -->
+        <!-- ✅ Modal Confirm Delete Station -->
     <div id="deleteModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-icon warning">⚠️</div>
@@ -336,7 +344,7 @@
             </div>
         </div>
     </div>
-    
+
 <script>
 // ✅ ฟังก์ชันแสดง Modal Confirm Delete
 function showDeleteModal(stationCode, onConfirm) {
@@ -726,7 +734,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 10',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 10',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -742,7 +750,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 33',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 33',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -762,7 +770,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 1',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 1',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -778,7 +786,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 5',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 5',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -798,7 +806,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 23',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 23',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -814,7 +822,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 50',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 50',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -834,7 +842,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 36',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 36',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -850,7 +858,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 130',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 130',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -870,7 +878,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 120',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 120',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -886,7 +894,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 460',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 460',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -906,7 +914,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 31.5',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 31.5',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -922,7 +930,7 @@ function deleteStation(stationCode) {
                                         borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 150',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 150',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -942,7 +950,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 0.2',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 0.2',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -958,7 +966,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 1.0',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 1.0',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
@@ -978,7 +986,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินเพื่อปกป้องสัตว์หน้าดิน: ≤ 43.4',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ 43.4',
                                         position: 'start',
                                         backgroundColor: 'blue',
                                         color: 'white',
@@ -994,7 +1002,7 @@ function deleteStation(stationCode) {
                                     borderDash: [6, 6],
                                     label: {
                                         display: true,
-                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับไม่ปลอดภัยต่อสัตว์หน้าดิน: ≥ 110',
+                                        content: 'มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ 110',
                                         position: 'end',
                                         backgroundColor: 'red',
                                         color: 'white',
