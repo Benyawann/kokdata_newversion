@@ -265,7 +265,7 @@ function showModal(type, title, message, onConfirm = null) {
     document.addEventListener('keydown', handleEsc);
 }
 
-// ✅ ส่งฟอร์ม - มีแค่หนึ่งเดียว และใช้ showModal()
+// ส่งฟอร์ม
 document.getElementById('stationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -347,7 +347,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('addSoilColBtn').addEventListener('click', () => {
         addColumn('soil');
-    }); 
+    });
+
+    // ส่งฟอร์ม
+    document.getElementById('stationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // ส่งจำนวนคอลัมน์ไปด้วย (ถ้าจำเป็น)
+        const formData = new FormData(document.getElementById('stationForm'));
+        formData.append('water_check_count', waterCheckColumns);
+        formData.append('soil_check_count', soilCheckColumns);
+        
+        try {
+            const response = await fetch(`/edit-station/{{ station.station }}`, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ บันทึกการแก้ไขเรียบร้อยแล้ว!');
+                window.location.href = `/station/{{ station.station }}`;
+            } else {
+                alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+        }
+    });
 });
 </script>
 </body>
