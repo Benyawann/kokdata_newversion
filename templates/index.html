@@ -12,6 +12,15 @@
         <div class="header">
             <h1>รายการสถานีตรวจสอบ</h1><span>ระบบแสดงข้อมูลสถานีตรวจสอบคุณภาพน้ำและดิน</span>
         </div>
+
+        <div class="header-buttons" style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+
+    <!-- ✅ ปุ่มดูแผนที่ (อยู่ขวาสุด) -->
+    <a href="/static/pages/map.html" class="map-btn">
+        <img src="/static/image/pin.png" alt="map" style="width: 18px; height: 18px;"> ดูแผนที่
+    </a>
+    </div>
+
         {% if session.logged_in %}
          <div class="user-info top-right">
             สวัสดี, {{ session.username or 'Admin' }}!
@@ -130,7 +139,7 @@
             <button class="floating-button" id="add"> + </button>
             </a>
         {% endif %}
-        <!-- ✅ Modal Confirm Logout -->
+    <!-- ✅ Modal Confirm Logout -->
     <div id="logoutModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-icon warning">⚠️</div>
@@ -144,7 +153,7 @@
     </div>
 
     <script id>
-         // ✅ ฟังก์ชันแสดง Modal Confirm
+        // ✅ ฟังก์ชันแสดง Modal Confirm
         function showLogoutModal(onConfirm) {
             const modal = document.getElementById('logoutModal');
             const confirmBtn = document.getElementById('modalConfirmBtn');
