@@ -9,8 +9,15 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import secrets
-from dotenv import load_dotenv  # ← เพิ่มตรงนี้
+from dotenv import load_dotenv 
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
+from functools import lru_cache
+import time
+
+_last_ryt9 = {'data': None, 'timestamp': 0}
+CACHE_DURATION = 1800  # 30 นาที
 
 load_dotenv()  # ← โหลดทันทีหลัง import
 
@@ -1257,7 +1264,207 @@ def api_data_by_check():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ===== ตั้งค่าแหล่งข่าวที่ต้องการ =====
+# ✅ เพิ่ม/แก้ไขลิงก์ที่นี่
+NEWS_SOURCES = {
+    'ryt9_1': {
+        'name': 'กรมอนามัย',
+        'url': 'https://www.ryt9.com/s/prg/3596933',
+        'icon': '📰'
+    },
+    'ryt9_2': {
+        'name': 'สารหนู',
+        'url': 'https://www.ryt9.com/s/iq01/12768056',
+        'icon': '⚠️'
+    },
+    'ryt9_3': {
+        'name': 'รองนายก',
+        'url': 'https://www.ryt9.com/s/prg/12721189',
+        'icon': '🏛️'
+    },
+    'ryt9_4': {
+        'name': 'สทนช',
+        'url': 'https://www.ryt9.com/s/prg/12731088',
+        'icon': '💰'
+    },
+    'ryt9_5': {
+        'name': 'ครม',
+        'url': 'https://www.ryt9.com/s/iq01/12729203',
+        'icon': '💰'
+    },
+    'ryt9_6': {
+        'name': 'สวทช',
+        'url': 'https://www.ryt9.com/s/prg/12748477',
+        'icon': '💰'
+    },
+    'ryt9_7': {
+        'name': 'สวทช',
+        'url': 'https://www.ryt9.com/s/prg/12716763',
+        'icon': '💰'
+    },
+    'ryt9_8': {
+        'name': 'สวทช',
+        'url': 'https://www.ryt9.com/s/prg/3595367',
+        'icon': '💰'
+    },
+}
+
+# ===== ตัวแปรแคช (ปรับให้รองรับหลายแหล่ง) =====
+_last_news = {}  # ใช้ dict แทน เพื่อแคชแยกตามแหล่ง
+CACHE_DURATION = 1800  # 30 นาที
+
+@app.route('/api/ryt9-news', methods=['GET'])
+def get_ryt9_news():
+    """ดึงข่าวจากทุกแหล่งใน NEWS_SOURCES"""
+    now = time.time()
+    
+    # ✅ ตรวจสอบแคชรวม
+    cache_key = 'all_sources'
+    if (_last_news.get(cache_key) and
+        (now - _last_news.get(f'{cache_key}_time', 0)) < CACHE_DURATION):
+        print("✅ Using cached news from all sources")
+        return jsonify({
+            'success': True,
+            'data': _last_news[cache_key],
+            'count': len(_last_news[cache_key]),
+            'cached': True
+        })
+    
+    all_news = []
+    news_id = 1
+    
+    try:
+        # ✅ ดึงข่าวจากทุกแหล่งใน NEWS_SOURCES
+        for source_key, source_info in NEWS_SOURCES.items():
+            target_url = source_info['url']
+            source_name = source_info['name']
+            source_icon = source_info['icon']
+            
+            print(f"🔄 Fetching from {source_name}: {target_url}")
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            
+            try:
+                response = requests.get(target_url, headers=headers, timeout=15)
+                response.encoding = 'utf-8'
+                
+                if response.status_code != 200:
+                    print(f"⚠️ Failed to fetch {source_name}: HTTP {response.status_code}")
+                    continue
+                
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # 🔍 ดึงรูปภาพข่าว
+                image_url = None
+                og_image = soup.find('meta', property='og:image')
+                if og_image and og_image.get('content'):
+                    image_url = og_image['content']
+                
+                if not image_url:
+                    twitter_image = soup.find('meta', attrs={'name': 'twitter:image'})
+                    if twitter_image and twitter_image.get('content'):
+                        image_url = twitter_image['content']
+                
+                if not image_url:
+                    img_tag = soup.find('img', class_=lambda x: x and ('image' in x.lower() or 'photo' in x.lower()))
+                    if img_tag:
+                        image_url = img_tag.get('src') or img_tag.get('data-src')
+                        if image_url and not image_url.startswith('http'):
+                            image_url = f"https://www.ryt9.com{image_url}"
+                
+                # ค้นหา title ของข่าว
+                title_elem = soup.find('h1') or soup.find('h2') or soup.find('title')
+                title = title_elem.get_text(strip=True) if title_elem else f'ข่าวจาก {source_name}'
+                
+                # ค้นหาเนื้อหาข่าว
+                content_elem = soup.find('div', class_='detail') or \
+                              soup.find('div', class_='content') or \
+                              soup.find('article')
+                content = content_elem.get_text(strip=True)[:500] + '...' if content_elem else ''
+                
+                # ค้นหาเวลา
+                time_elem = soup.find('time') or soup.find('span', class_='date')
+                pub_date = time_elem.get_text(strip=True) if time_elem else datetime.now().strftime('%d %b %y')
+                
+                # สร้างรายการข่าว (1 ข่าวจากแต่ละแหล่ง)
+                all_news.append({
+                    'id': news_id,
+                    'type': 'normal',
+                    'badge': '🔵 ทั่วไป',
+                    'badgeClass': 'badge-normal',
+                    'title': title,
+                    'excerpt': content[:150] + '...' if len(content) > 150 else content,
+                    'content': f'''
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                    color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; 
+                                         border-radius: 12px; font-size: 12px;">
+                                {source_icon} {source_name}
+                            </span>
+                        </div>
+                        <div style="text-align:center; margin: 20px 0;">
+                            <a href="{target_url}" target="_blank"
+                               style="display: inline-block; padding: 14px 28px;
+                                      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+                                      color: white; text-decoration: none; border-radius: 8px;
+                                      font-weight: 600;">
+                                📰 อ่านข่าวเต็มรูปแบบ
+                            </a>
+                        </div>
+                        <div style="margin-top: 25px; padding: 16px; background: #f8f9fa;
+                                    border-left: 4px solid #1a73e8; border-radius: 6px;">
+                            <p style="margin: 0; color: #555;">
+                                <strong>ℹ️ หมายเหตุ:</strong> เนื้อหาข่าวฉบับเต็มแสดงบนเว็บไซต์ต้นทาง
+                            </p>
+                            <p style="margin: 10px 0 0 0; font-size: 13px; color: #888;">
+                                🔗 <a href="{target_url}" target="_blank" style="color:#1a73e8;">{target_url}</a>
+                            </p>
+                        </div>
+                    ''',
+                    'date': pub_date,
+                    'source': source_name,
+                    'externalLink': target_url,
+                    'image': image_url,
+                    'sourceKey': source_key
+                })
+                news_id += 1
+                
+            except Exception as e:
+                print(f"⚠️ Error fetching {source_name}: {e}")
+                continue
         
+        if not all_news:
+            all_news = [{
+                'id': 1, 'type': 'normal', 'badge': '🔵 ทั่วไป', 'badgeClass': 'badge-normal',
+                'title': 'ไม่สามารถดึงข่าวได้ในขณะนี้',
+                'excerpt': 'กรุณาลองใหม่อีกครั้งในภายหลัง',
+                'content': '<p>ไม่สามารถดึงข่าวจากแหล่งที่กำหนดได้</p>',
+                'date': datetime.now().strftime('%d %b %y'),
+                'source': 'ระบบ', 'externalLink': '#', 'image': None
+            }]
+        
+        print(f"✅ Fetched {len(all_news)} news items from {len(NEWS_SOURCES)} sources")
+        
+        # บันทึกแคช
+        _last_news[cache_key] = all_news
+        _last_news[f'{cache_key}_time'] = time.time()
+        
+        return jsonify({
+            'success': True,
+            'data': all_news,
+            'count': len(all_news),
+            'sources': len(NEWS_SOURCES)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # === Main Entry Point ===
 if __name__ == '__main__':
     # ✅ สร้างตารางถ้ายังไม่มี
