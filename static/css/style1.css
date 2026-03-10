@@ -278,16 +278,23 @@ body {
 
 .parameter-selector {
     margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: stretch;
 }
 
 .parameter-selector select {
-    padding: 10px 15px;
+    flex: 1;
+    padding: 10px 14px;
     border-radius: 8px;
-    font-size: 1em;
+    font-size: 14px;
     background: white;
     cursor: pointer;
     outline: none;
-    min-width: 250px;
+    min-width: 200px;
+    border:2px solid #ddd;
 }
 
 .chart-toggle {
