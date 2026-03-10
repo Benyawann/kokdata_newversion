@@ -1465,6 +1465,16 @@ def get_ryt9_news():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.errorhandler(Exception)
+def handle_error(error):
+    import traceback
+    error_trace = traceback.format_exc()
+    print(f"ERROR: {error_trace}")  # จะแสดงใน Vercel logs
+    return {
+        'error': str(error),
+        'traceback': error_trace
+    }, 500
+
 # === Main Entry Point ===
 if __name__ == '__main__':
     # ✅ สร้างตารางถ้ายังไม่มี
