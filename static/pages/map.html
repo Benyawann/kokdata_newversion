@@ -183,7 +183,8 @@ async function fetchTambonData() {
 function populateTambonDropdown() {
     if (!tambonData || !tambonData.tambons) return;
     const select = document.getElementById('tambon-select');
-    select.innerHTML = '<option value="all">ทุกตำบล (ภาพรวม)</option>';
+     // ✅ เริ่มลิสต์จากตำบลแรกเลย
+    select.innerHTML = '';
     tambonData.tambons.forEach(tambon => {
         if (tambon) select.innerHTML += `<option value="${tambon}">${tambon}</option>`;
     });
@@ -301,7 +302,7 @@ async function updateMapMarkers() {
 
     stationsInfo.forEach(st => {
         if (!st.lat || !st.lon) return;
-        if (tambonFilter !== 'all' && st.tambon !== tambonFilter) return;
+        if (st.tambon !== tambonFilter) return;
         
         let isDanger = false;
         let stationValue = null;
@@ -506,23 +507,7 @@ async function updateChartByTambon() {
     let datasetsToShow = [];
     const colors = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6', '#e67e22', '#1abc9c', '#fd79a8'];
     
-    if (tambonKey === 'all') {
-        const tambons = Object.keys(currentData).sort();
-        datasetsToShow = tambons.map((tambon, idx) => {
-            const stations = currentData[tambon];
-            const values = stations.map(s => s.value).filter(v => v !== null);
-            const avgValue = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
-            return { 
-                label: tambon, 
-                data: [avgValue], 
-                backgroundColor: colors[idx % colors.length] + '80', 
-                borderColor: colors[idx % colors.length], 
-                borderWidth: 2, 
-                pointRadius: 0 
-            };
-        });
-    } else {
-        const stations = currentData[tambonKey] || [];
+    const stations = currentData[tambonKey] || [];
         if (stations.length > 0) {
             datasetsToShow = stations.map((station, idx) => ({
                 label: `${station.station}`, 
@@ -533,7 +518,6 @@ async function updateChartByTambon() {
                 pointRadius: 0
             }));
         }
-    }
 
     // สร้าง annotation
     const annotations = createAnnotations(paramKey, currentTab, standardVal, unit);
@@ -585,7 +569,7 @@ async function updateChartByTambon() {
                 x: {
                     title: { 
                         display: true, 
-                        text: tambonKey === 'all' ? 'ตำบล' : 'สถานี', 
+                        text: 'สถานี',
                         font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' } 
                     },
                     ticks: { maxRotation: 45, minRotation: 45 }
@@ -618,11 +602,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         const tambonSelect = document.getElementById('tambon-select');
         const paramSelect = document.getElementById('param-select');
         
-        if (tambonSelect.options.length > 1) {
-            tambonSelect.value = 'all';  // เลือก "ทุกตำบล" เป็นค่าเริ่มต้น
+        if (tambonSelect.options.length > 0) {
+            tambonSelect.value = tambonSelect.options[0].value;
         }
+        
         if (paramSelect.options.length > 0) {
-            paramSelect.value = paramSelect.options[0].value;  // เลือกพารามิเตอร์แรก
+            paramSelect.value = paramSelect.options[0].value;
         }
         
         // ✅ 3. สร้างแผนที่และอัปเดต
