@@ -778,7 +778,7 @@ def map_page(station_code):
     
     # 4. ส่งข้อมูลไป template
     return render_template(
-        'map.html',
+        'mapandnews.html',
         station=station,      # ✅ ส่ง object ทั้งก้อน
         water_data=water_data,
         soil_data=soil_data
