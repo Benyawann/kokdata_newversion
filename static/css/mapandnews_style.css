@@ -1001,29 +1001,6 @@ body {
 .trend-item .value.decrease { color: #27ae60; }
 .trend-item .value.stable { color: #f39c12; }
 
-.trend-confidence {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9em;
-    color: #666;
-}
-
-.confidence-bar {
-    flex: 1;
-    height: 6px;
-    background: #e0e0e0;
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.confidence-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-
 .trend-note {
     margin-top: 10px;
     font-size: 0.85em;
