@@ -40,7 +40,7 @@
             <!-- ✅ สรุปจำนวนสถานี (เพิ่มใหม่) -->
             <div id="station-summary-box" class="station-summary" style="display: none; margin-top: 20px;">
                 <div class="summary-header">
-                    <span>📊 สรุปจำนวนสถานีในตำบล: <strong id="summary-tambon-name"></strong></span>
+                    <span style="font-size: 1.3em; font-weight: bold;">📊 สรุปจำนวนสถานีในตำบล: <strong id="summary-tambon-name"></strong></span>
                     <span id="summary-check-label" class="check-badge"></span>
                 </div>
         
@@ -289,7 +289,7 @@ function populateCheckDropdown() {
     select.innerHTML = `<option value="latest">${latestText}</option>`;  // ✅ แสดงค่าจริง
     
     if (currentChecks && Array.isArray(currentChecks)) {
-        // เรียงจากใหม่ไปเก่า (ไม่รวมค่าล่าสุดที่แสดงอยู่แล้ว)
+        // เรียงจากใหม่ไปเก่า (ไม่รวมค่าล่าสุดที่แสดงอยู่)
         [...currentChecks]
             .filter(c => c !== latestCheck)  // ไม่ซ้ำกับตัวเลือกแรก
             .reverse()
@@ -318,20 +318,24 @@ async function updateMapMarkers() {
         console.log('⏳ Map or data not ready');
         return;
     }
-    
+
     // ลบล้างมาร์คเกอร์เก่า
     markers.forEach(m => mapInstance.removeLayer(m));
     markers = [];
-    
+
     const paramKey = document.getElementById('param-select').value;
     const tambonFilter = document.getElementById('tambon-select').value;
     const selectedCheck = document.getElementById('check-select').value;
     const standard = standards[currentTab]?.[paramKey];
-    
-    if (!paramKey || !tambonData) return;
-    
+
+    if (!paramKey || !tambonData || !tambonFilter) {
+        // ซ่อนสรุปถ้าไม่มีข้อมูล
+        document.getElementById('station-summary-box').style.display = 'none';
+        return;
+    }
+
     let currentData;
-    
+
     // ✅ ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
     if (selectedCheck === 'latest') {
         currentData = currentTab === 'water' ?
@@ -353,43 +357,44 @@ async function updateMapMarkers() {
             return;
         }
     }
-    
-    if (!currentData) return;
-    
-    // ✅ นับจำนวนสถานีทั้งหมด (ทุกตำบลรวมกัน)
+
+    if (!currentData) {
+        document.getElementById('station-summary-box').style.display = 'none';
+        return;
+    }
+
+    // ✅ ✅ ✅ แยกการนับออกจากการสร้าง marker (เร็วขึ้น)
     let exceeds = 0, normal = 0, noData = 0;
-    
-    // วนลูปทุกสถานีใน stationsInfo (ไม่กรองตามตำบล)
-    stationsInfo.forEach(st => {
+
+    // นับเฉพาะสถานีในตำบลที่เลือก (ไม่ใช่ทั้งหมด)
+    const tambonStations = stationsInfo.filter(st => st.tambon === tambonFilter);
+
+    tambonStations.forEach(st => {
         if (!st.lat || !st.lon) return;
-        // ❌ ลบการกรองตามตำบล: if (st.tambon !== tambonFilter) return;
-        
+
         let stationValue = null;
         let isDanger = false;
-        
-        // ✅ ค้นหาข้อมูลของสถานีนี้ (ค้นหาในทุกตำบล)
-        for (const tambon in currentData) {
-            const stationDataList = currentData[tambon] || [];
-            const stationData = stationDataList.find(d => d.station === st.id);
-            
-            if (stationData && stationData.value !== null) {
-                stationValue = stationData.value;
-                
-                // ✅ แยกการเปรียบเทียบน้ำและดิน
-                if (currentTab === 'water') {
-                    if (typeof standard === 'number' && stationValue > standard) {
-                        isDanger = true;
-                    }
-                } else {
-                    if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
-                        isDanger = true;
-                    }
+
+        // ค้นหาข้อมูลของสถานีนี้
+        const stationDataList = currentData[tambonFilter] || [];
+        const stationData = stationDataList.find(d => d.station === st.id);
+
+        if (stationData && stationData.value !== null) {
+            stationValue = stationData.value;
+
+            // แยกการเปรียบเทียบน้ำและดิน
+            if (currentTab === 'water') {
+                if (typeof standard === 'number' && stationValue > standard) {
+                    isDanger = true;
                 }
-                break;
+            } else {
+                if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
+                    isDanger = true;
+                }
             }
         }
-        
-        // ✅ นับจำนวนตามสถานะ
+
+        // นับจำนวนตามสถานะ
         if (stationValue === null || stationValue === undefined) {
             noData++;
         } else if (isDanger) {
@@ -398,71 +403,62 @@ async function updateMapMarkers() {
             normal++;
         }
     });
-    
-    // ✅ แสดงสรุปจำนวนสถานี (เรียกฟังก์ชันแยก)
+
+    // ✅ อัปเดตสรุปทันที (ก่อนสร้าง marker)
     updateStationSummary(paramKey, currentTab, selectedCheck, exceeds, normal, noData);
-    
-    // ✅ สร้างมาร์คเกอร์บนแผนที่ (แสดงเฉพาะตำบลที่เลือก)
-    stationsInfo.forEach(st => {
+
+    // ✅ สร้างมาร์คเกอร์บนแผนที่ (แยกจากการนับ)
+    tambonStations.forEach(st => {
         if (!st.lat || !st.lon) return;
-        if (st.tambon !== tambonFilter) return;  // ✅ กรองเฉพาะตำบลที่เลือกสำหรับแสดงบนแผนที่
-        
+
         let isDanger = false;
         let stationValue = null;
         let checkNumber = selectedCheck === 'latest' ?
             (currentTab === 'water' ? tambonData.water_latest_check : tambonData.soil_latest_check) :
             selectedCheck;
-        
-        // ✅ ค้นหาข้อมูลในรอบที่เลือก
-        for (const tambon in currentData) {
-            const stationData = currentData[tambon].find(d =>
-                d.station === st.id &&
-                d.check_number === (selectedCheck === 'latest' ? checkNumber : selectedCheck)
-            );
-            if (stationData && stationData.value !== null) {
-                stationValue = stationData.value;
-                checkNumber = stationData.check_number;
-                
-                if (currentTab === 'water') {
-                    if (typeof standard === 'number' && stationValue > standard) {
-                        isDanger = true;
-                    }
-                } else {
-                    if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
-                        isDanger = true;
-                    }
+
+        // ค้นหาข้อมูลในรอบที่เลือก
+        const stationDataList = currentData[tambonFilter] || [];
+        const stationData = stationDataList.find(d =>
+            d.station === st.id &&
+            d.check_number === (selectedCheck === 'latest' ? checkNumber : selectedCheck)
+        );
+
+        if (stationData && stationData.value !== null) {
+            stationValue = stationData.value;
+            checkNumber = stationData.check_number;
+
+            if (currentTab === 'water') {
+                if (typeof standard === 'number' && stationValue > standard) {
+                    isDanger = true;
                 }
-                break;
+            } else {
+                if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
+                    isDanger = true;
+                }
             }
         }
-        
+
         const markerClass = stationValue !== null ? (isDanger ? 'danger' : 'safe') : 'no-data';
-        
+
         const customIcon = L.divIcon({
             className: 'custom-marker',
             html: `<div class="marker-dot ${markerClass}"></div>`,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
         });
-        
+
         const marker = L.marker([st.lat, st.lon], { icon: customIcon }).addTo(mapInstance);
-        
+
         let rawValue = null;
-        if (stationValue !== null) {
-            for (const tambon in currentData) {
-                const stationData = currentData[tambon].find(s => s.station === st.id);
-                if (stationData?.raw_value) {
-                    rawValue = stationData.raw_value;
-                    break;
-                }
-            }
-            if (!rawValue) rawValue = stationValue;
+        if (stationData && stationData.raw_value) {
+            rawValue = stationData.raw_value;
         }
-        
+
         const displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
         const valueText = displayValue !== null ? `${displayValue}` : 'ไม่มีข้อมูล';
         const statusText = stationValue === null ? '⚪ ไม่มีข้อมูล' : (isDanger ? '🔴 เกินมาตรฐาน' : '🟢 ปกติ');
-        
+
         marker.bindPopup(`
             <div style="text-align:center;min-width:200px;padding:5px;">
                 <strong style="color:#2c3e50;">${st.name}</strong><br>
@@ -472,7 +468,7 @@ async function updateMapMarkers() {
                 <span style="color:${isDanger ? '#e74c3c' : (stationValue !== null ? '#27ae60' : '#95a5a6')};font-weight:600;display:block;margin:5px 0;">${statusText}</span>
                 <strong style="color:#2c3e50;">${st.id}</strong><br>
             </div>`);
-        
+
         markers.push(marker);
     });
 }
@@ -566,7 +562,7 @@ async function updateChartByTambon() {
     let currentData;
     let unit;
     
-    // ✅ ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
+    // ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
     if (selectedCheck === 'latest') {
         currentData = currentTab === 'water' ? 
             tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
@@ -613,10 +609,10 @@ async function updateChartByTambon() {
         }));
     }
 
-    // ✅ สร้าง annotation
+    // สร้างค่ามาตรฐานสำหรับกราฟ
     const annotations = createAnnotations(paramKey, currentTab, standardVal, unit);
     
-    // ✅ สร้างกราฟ
+    // สร้างกราฟ
     const ctx = document.getElementById('mainChart')?.getContext('2d');
     if (!ctx) return;
     if (chartInstance) chartInstance.destroy();
@@ -672,7 +668,7 @@ async function updateChartByTambon() {
         }
     });
     
-    // ✅ แสดงการคาดการณ์แนวโน้ม
+    // แสดงการคาดการณ์แนวโน้ม
     showTrendPrediction(paramKey, tambonKey, currentTab);
     
     updateMapMarkers();
@@ -682,7 +678,7 @@ async function updateChartByTambon() {
 async function showTrendPrediction(paramKey, tambonKey, dataType) {
     const selectedCheck = document.getElementById('check-select').value;
     
-    // ✅ ดึงข้อมูลประวัติทั้งหมดจาก API (ไม่ใช่แค่ล่าสุด)
+    // ดึงข้อมูลประวัติทั้งหมดจาก API (ไม่ใช่แค่ล่าสุด)
     let historyData = [];
     
     if (selectedCheck === 'latest') {
@@ -704,7 +700,7 @@ async function showTrendPrediction(paramKey, tambonKey, dataType) {
             }
         });
     } else {
-        // ✅ ถ้าเลือกรอบย้อนหลัง ให้ fetch ข้อมูลจาก API
+        // ถ้าเลือกรอบย้อนหลัง ให้ fetch ข้อมูลจาก API
         try {
             const response = await fetch(
                 `/api/data-by-check?check_number=${encodeURIComponent(selectedCheck)}&type=${dataType}`
@@ -730,11 +726,11 @@ async function showTrendPrediction(paramKey, tambonKey, dataType) {
     
     if (historyData.length < 2) return; // ต้องมีข้อมูลอย่างน้อย 2 จุดเพื่อคำนวณแนวโน้ม
     
-    // ✅ คำนวณค่าเฉลี่ยของทุกสถานีในตำบลนี้
+    // คำนวณค่าเฉลี่ยของทุกสถานีในตำบลนี้
     const values = historyData.map(d => d.value);
     const prediction = predictTrend(values, paramKey, dataType);
     
-    // ✅ แสดงผลการคาดการณ์
+    // แสดงผลการคาดการณ์
     const chartPanel = document.querySelector('.chart-panel-report');
     let trendBox = document.getElementById('trend-prediction-box');
     
@@ -778,13 +774,6 @@ async function showTrendPrediction(paramKey, tambonKey, dataType) {
                 </div>
             </div>
         </div>
-        <div class="trend-confidence">
-            <span>ความเชื่อมั่น:</span>
-            <div class="confidence-bar">
-                <div class="confidence-fill" style="width: ${prediction.confidence}%"></div>
-            </div>
-            <span>${prediction.confidence}%</span>
-        </div>
         <div class="trend-note">
             ⚠️ หมายเหตุ: การคาดการณ์นี้ใช้แบบจำลอง Linear Regression จากข้อมูลแผนภูมิ
             ผลลัพธ์อาจมีความคลาดเคลื่อน ควรใช้ประกอบการตัดสินใจเท่านั้น
@@ -821,21 +810,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             paramSelect.value = paramSelect.options[0].value;
         }
         
-        // ✅ 3. สร้างแผนที่และอัปเดต
+        // 3. สร้างแผนที่และอัปเดต
         setTimeout(() => { 
             initMap();
             setTimeout(() => { 
                 if (mapInstance) mapInstance.invalidateSize(); 
-                updateMapMarkers();  // ✅ เรียกอีกครั้งเพื่อให้แน่ใจว่าแสดงครบ
-            }, 50); 
-        }, 25);
+                updateMapMarkers();  // เรียกอีกครั้งเพื่อให้แน่ใจว่าแสดงครบ
+            }, 25); 
+        }, 5);
         
-        // ✅ 4. อัปเดตแผนภูมิ
+        // ✅4. อัปเดตแผนภูมิ
         updateChartByTambon();
     }
     
     window.addEventListener('resize', function() { 
-        if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 100); 
+        if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 5); 
     });
 });
 
@@ -863,7 +852,7 @@ function predictTrend(dataPoints, paramName, dataType) {
     
     const denominator = (n * sumX2 - sumX * sumX);
     if (denominator === 0) {
-        return { trend: 'stable', confidence: 50, message: 'ข้อมูลไม่มีความแปรผัน' };
+        return { trend: 'stable', message: 'ข้อมูลไม่มีความแปรผัน' };
     }
     
     const slope = (n * sumXY - sumX * sumY) / denominator;
@@ -955,6 +944,7 @@ function updateStationSummary(paramKey, dataType, selectedCheck, exceeds, normal
     
     console.log(`✅ Station Summary (All Tambons): ${exceeds} exceeds, ${normal} normal, ${noData} no data, ${total} total`);
 }
+
 
 // ===== ส่วนข่าวสาร =====
 let newsData = [];
