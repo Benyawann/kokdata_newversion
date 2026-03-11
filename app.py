@@ -1265,65 +1265,36 @@ def api_data_by_check():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# ===== ตั้งค่าแหล่งข่าวที่ต้องการ =====
-# ✅ เพิ่ม/แก้ไขลิงก์ที่นี่
-NEWS_SOURCES = {
-    'ryt9_1': {
-        'name': 'กรมอนามัย',
-        'url': 'https://www.ryt9.com/s/prg/3596933',
-        'icon': '📰'
-    },
-    'ryt9_2': {
-        'name': 'สารหนู',
-        'url': 'https://www.ryt9.com/s/iq01/12768056',
-        'icon': '⚠️'
-    },
-    'ryt9_3': {
-        'name': 'รองนายก',
-        'url': 'https://www.ryt9.com/s/prg/12721189',
-        'icon': '🏛️'
-    },
-    'ryt9_4': {
-        'name': 'สทนช',
-        'url': 'https://www.ryt9.com/s/prg/12731088',
-        'icon': '💰'
-    },
-    'ryt9_5': {
-        'name': 'ครม',
-        'url': 'https://www.ryt9.com/s/iq01/12729203',
-        'icon': '💰'
-    },
-    'ryt9_6': {
-        'name': 'สวทช',
-        'url': 'https://www.ryt9.com/s/prg/12748477',
-        'icon': '💰'
-    },
-    'ryt9_7': {
-        'name': 'สวทช',
-        'url': 'https://www.ryt9.com/s/prg/12716763',
-        'icon': '💰'
-    },
-    'ryt9_8': {
-        'name': 'สวทช',
-        'url': 'https://www.ryt9.com/s/prg/3595367',
-        'icon': '💰'
-    },
-}
-
-# ===== ตัวแปรแคช (ปรับให้รองรับหลายแหล่ง) =====
 _last_news = {}  # ใช้ dict แทน เพื่อแคชแยกตามแหล่ง
 CACHE_DURATION = 1800  # 30 นาที
 
 @app.route('/api/ryt9-news', methods=['GET'])
 def get_ryt9_news():
-    """ดึงข่าวจากทุกแหล่งใน NEWS_SOURCES"""
+    """ดึงข่าวจากทุกแหล่งในฐานข้อมูล"""
     now = time.time()
     
-    # ✅ ตรวจสอบแคชรวม
+    # ✅ ดึงแหล่งข่าวจาก Database (มี cache)
+    if (_last_news_sources['data'] and
+        (now - _last_news_sources['timestamp']) < SOURCES_CACHE_DURATION):
+        NEWS_SOURCES = _last_news_sources['data']
+        print("✅ Using cached news sources")
+    else:
+        NEWS_SOURCES = get_news_sources()
+        _last_news_sources['data'] = NEWS_SOURCES
+        _last_news_sources['timestamp'] = time.time()
+        print(f"✅ Fetched {len(NEWS_SOURCES)} news sources from database")
+    
+    if not NEWS_SOURCES:
+        return jsonify({
+            'success': False,
+            'error': 'ไม่พบแหล่งข่าวในระบบ'
+        }), 500
+    
+    # ✅ ใช้แคชข่าวถ้ายังไม่หมดอายุ
     cache_key = 'all_sources'
     if (_last_news.get(cache_key) and
         (now - _last_news.get(f'{cache_key}_time', 0)) < CACHE_DURATION):
-        print("✅ Using cached news from all sources")
+        print("✅ Using cached news data")
         return jsonify({
             'success': True,
             'data': _last_news[cache_key],
@@ -1335,7 +1306,7 @@ def get_ryt9_news():
     news_id = 1
     
     try:
-        # ✅ ดึงข่าวจากทุกแหล่งใน NEWS_SOURCES
+        # ✅ ดึงข่าวจากทุกแหล่งใน Database
         for source_key, source_info in NEWS_SOURCES.items():
             target_url = source_info['url']
             source_name = source_info['name']
@@ -1375,11 +1346,11 @@ def get_ryt9_news():
                         if image_url and not image_url.startswith('http'):
                             image_url = f"https://www.ryt9.com{image_url}"
                 
-                # ค้นหา title ของข่าว
+                # ค้นหา title
                 title_elem = soup.find('h1') or soup.find('h2') or soup.find('title')
                 title = title_elem.get_text(strip=True) if title_elem else f'ข่าวจาก {source_name}'
                 
-                # ค้นหาเนื้อหาข่าว
+                # ค้นหาเนื้อหา
                 content_elem = soup.find('div', class_='detail') or \
                               soup.find('div', class_='content') or \
                               soup.find('article')
@@ -1389,7 +1360,7 @@ def get_ryt9_news():
                 time_elem = soup.find('time') or soup.find('span', class_='date')
                 pub_date = time_elem.get_text(strip=True) if time_elem else datetime.now().strftime('%d %b %y')
                 
-                # สร้างรายการข่าว (1 ข่าวจากแต่ละแหล่ง)
+                # สร้างรายการข่าว
                 all_news.append({
                     'id': news_id,
                     'type': 'normal',
@@ -1413,15 +1384,6 @@ def get_ryt9_news():
                                       font-weight: 600;">
                                 📰 อ่านข่าวเต็มรูปแบบ
                             </a>
-                        </div>
-                        <div style="margin-top: 25px; padding: 16px; background: #f8f9fa;
-                                    border-left: 4px solid #1a73e8; border-radius: 6px;">
-                            <p style="margin: 0; color: #555;">
-                                <strong>ℹ️ หมายเหตุ:</strong> เนื้อหาข่าวฉบับเต็มแสดงบนเว็บไซต์ต้นทาง
-                            </p>
-                            <p style="margin: 10px 0 0 0; font-size: 13px; color: #888;">
-                                🔗 <a href="{target_url}" target="_blank" style="color:#1a73e8;">{target_url}</a>
-                            </p>
                         </div>
                     ''',
                     'date': pub_date,
@@ -1447,10 +1409,7 @@ def get_ryt9_news():
             }]
         
         print(f"✅ Fetched {len(all_news)} news items from {len(NEWS_SOURCES)} sources")
-        
-        # บันทึกแคช
-        _last_news[cache_key] = all_news
-        _last_news[f'{cache_key}_time'] = time.time()
+
         
         return jsonify({
             'success': True,
@@ -1474,6 +1433,40 @@ def handle_error(error):
         'error': str(error),
         'traceback': error_trace
     }, 500
+
+# ===== News Sources from Database =====
+def get_news_sources():
+    """ดึงแหล่งข่าวจาก Supabase"""
+    conn = None
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, name, url, icon, is_active
+            FROM news_sources
+            WHERE is_active = true
+            ORDER BY id
+        """)
+        sources = cur.fetchall()
+        conn.close()
+        
+        # แปลงเป็น dictionary
+        news_sources = {}
+        for source in sources:
+            key = f"source_{source['id']}"
+            news_sources[key] = {
+                'name': source['name'],
+                'url': source['url'],
+                'icon': source['icon']
+            }
+        return news_sources
+    except Exception as e:
+        print(f"❌ Error fetching news sources: {e}")
+        return {}  # คืนค่าว่างถ้ามี error
+
+# ===== Cache สำหรับแหล่งข่าว =====
+_last_news_sources = {'data': None, 'timestamp': 0}
+SOURCES_CACHE_DURATION = 3600  # 1 ชั่วโมง
 
 # === Main Entry Point ===
 if __name__ == '__main__':
