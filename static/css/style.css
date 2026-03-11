@@ -432,24 +432,6 @@ body {
     background: #b58263;
 }
 
-.news-btn{
-    display: inline-flex; 
-    align-items: center; 
-    gap: 6px; 
-    padding: 8px 16px; 
-    background: #3498db; 
-    color: white; 
-    text-decoration: none; 
-    border-radius: 20px; 
-    font-size: 14px; 
-    font-weight: 600; 
-    transition: background 0.2s;
-}
-
-.news-btn:hover {
-    background: #2980b9;
-}
-
 @keyframes fadeIn { 
     from { 
         opacity: 0; 
