@@ -1082,10 +1082,11 @@ body {
     outline: none;
 }
 
-/* ✅ News Grid - Desktop Default (3 columns) */
+/* ===== News Grid Base ===== */
 .news-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Desktop: 3 คอลัมน์ */
+    /* Desktop: 3 คอลัมน์ */
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     align-items: stretch;
 }
@@ -1273,7 +1274,7 @@ body {
     
     /* ✅ สำคัญ: 1 คอลัมน์บนมือถือ */
     .news-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(1, 1fr);
         gap: 15px;
     }
     
@@ -1333,7 +1334,7 @@ body {
     }
     
     .news-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(1, 1fr) !important;
         gap: 12px;
     }
     
