@@ -40,7 +40,7 @@
             <!-- ✅ สรุปจำนวนสถานี (เพิ่มใหม่) -->
             <div id="station-summary-box" class="station-summary" style="display: none; margin-top: 20px;">
                 <div class="summary-header">
-                    <span style="font-size: 1.3em; font-weight: bold;">📊 สรุปจำนวนสถานีในตำบล: <strong id="summary-tambon-name"></strong></span>
+                    <span style="font-size: 1.3em; font-weight: bold;">📊 สรุปจำนวนสถานี <strong id="summary-tambon-name"></strong></span>
                     <span id="summary-check-label" class="check-badge"></span>
                 </div>
         
@@ -328,8 +328,7 @@ async function updateMapMarkers() {
     const selectedCheck = document.getElementById('check-select').value;
     const standard = standards[currentTab]?.[paramKey];
 
-    if (!paramKey || !tambonData || !tambonFilter) {
-        // ซ่อนสรุปถ้าไม่มีข้อมูล
+    if (!paramKey || !tambonData) {
         document.getElementById('station-summary-box').style.display = 'none';
         return;
     }
@@ -363,34 +362,35 @@ async function updateMapMarkers() {
         return;
     }
 
-    // ✅ ✅ ✅ แยกการนับออกจากการสร้าง marker (เร็วขึ้น)
+    // ✅ ✅ ✅ นับสถานีทั้งหมด (ไม่กรองตามตำบล)
     let exceeds = 0, normal = 0, noData = 0;
 
-    // นับเฉพาะสถานีในตำบลที่เลือก (ไม่ใช่ทั้งหมด)
-    const tambonStations = stationsInfo.filter(st => st.tambon === tambonFilter);
-
-    tambonStations.forEach(st => {
+    // วนลูปทุกสถานีใน stationsInfo (นับทั้งหมด)
+    stationsInfo.forEach(st => {
         if (!st.lat || !st.lon) return;
 
         let stationValue = null;
         let isDanger = false;
 
-        // ค้นหาข้อมูลของสถานีนี้
-        const stationDataList = currentData[tambonFilter] || [];
-        const stationData = stationDataList.find(d => d.station === st.id);
+        // ค้นหาข้อมูลของสถานีนี้ (ค้นหาในทุกตำบล)
+        for (const tambon in currentData) {
+            const stationDataList = currentData[tambon] || [];
+            const stationData = stationDataList.find(d => d.station === st.id);
 
-        if (stationData && stationData.value !== null) {
-            stationValue = stationData.value;
+            if (stationData && stationData.value !== null) {
+                stationValue = stationData.value;
 
-            // แยกการเปรียบเทียบน้ำและดิน
-            if (currentTab === 'water') {
-                if (typeof standard === 'number' && stationValue > standard) {
-                    isDanger = true;
+                // แยกการเปรียบเทียบน้ำและดิน
+                if (currentTab === 'water') {
+                    if (typeof standard === 'number' && stationValue > standard) {
+                        isDanger = true;
+                    }
+                } else {
+                    if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
+                        isDanger = true;
+                    }
                 }
-            } else {
-                if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) {
-                    isDanger = true;
-                }
+                break;
             }
         }
 
@@ -407,7 +407,8 @@ async function updateMapMarkers() {
     // ✅ อัปเดตสรุปทันที (ก่อนสร้าง marker)
     updateStationSummary(paramKey, currentTab, selectedCheck, exceeds, normal, noData);
 
-    // ✅ สร้างมาร์คเกอร์บนแผนที่ (แยกจากการนับ)
+    // ✅ สร้างมาร์คเกอร์บนแผนที่ (แสดงเฉพาะตำบลที่เลือก)
+    const tambonStations = stationsInfo.filter(st => st.tambon === tambonFilter);
     tambonStations.forEach(st => {
         if (!st.lat || !st.lon) return;
 
@@ -440,7 +441,6 @@ async function updateMapMarkers() {
         }
 
         const markerClass = stationValue !== null ? (isDanger ? 'danger' : 'safe') : 'no-data';
-
         const customIcon = L.divIcon({
             className: 'custom-marker',
             html: `<div class="marker-dot ${markerClass}"></div>`,
