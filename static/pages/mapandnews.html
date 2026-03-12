@@ -1029,7 +1029,7 @@ function showStationList(type) {
             </div>
         `;
     } else {
-        // ✅ แสดงอันดับที่ (#1, #2, #3...)
+        // แสดงอันดับที่ (#1, #2, #3...)
         cardContent.innerHTML = stations.map((st, index) => `
             <div class="station-list-item ${type}">
                 <div class="station-rank" style="min-width: 30px; font-weight: bold; color: #666; font-size: 0.9em;">
@@ -1106,7 +1106,6 @@ function showHealthAdvice(exceeds, normal, noData, paramKey) {
         </div>
             
             <div class="advice-section" style="margin-top: 10px;">
-                <strong style="color: #2c3e50;">คำแนะนำ:</strong>
                 <ul style="margin: 5px 0 0 20px; color: #666; font-size: 0.9em; padding-left: 0;">
                     ${advice.advice.map(item => `<li style="margin-bottom: 4px;">${item}</li>`).join('')}
                 </ul>
