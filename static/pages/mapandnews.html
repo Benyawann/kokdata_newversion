@@ -38,39 +38,48 @@
             <h3>🗺️ แผนที่จุดตรวจวัด</h3>
             <div id="map"></div>
             <!-- สรุปจำนวนสถานี-->
-            <div id="station-summary-box" class="station-summary" style="display: none; margin-top: 20px;">
-                <div class="summary-header">
-                    <span style="font-size: 1.3em; font-weight: bold;">📊 สรุปจำนวนสถานี <strong id="summary-tambon-name"></strong></span>
-                    <span id="summary-check-label" class="check-badge"></span>
-                </div>
-        
-        <div class="summary-stats">
-            <div class="stat-card danger">
-                <div class="stat-icon">🔴</div>
-                <div class="stat-value" id="stat-exceeds">0</div>
-                <div class="stat-label">เกินมาตรฐาน</div>
-            </div>
-            <div class="stat-card safe">
-                <div class="stat-icon">🟢</div>
-                <div class="stat-value" id="stat-normal">0</div>
-                <div class="stat-label">ปกติ</div>
-            </div>
-            <div class="stat-card no-data">
-                <div class="stat-icon">⚪</div>
-                <div class="stat-value" id="stat-nodata">0</div>
-                <div class="stat-label">ไม่มีข้อมูล</div>
-            </div>
-            <div class="stat-card total">
-                <div class="stat-icon">📍</div>
-                <div class="stat-value" id="stat-total">0</div>
-                <div class="stat-label">ทั้งหมด</div>
-            </div>
+<div id="station-summary-box" class="station-summary" style="display: none; margin-top: 20px;">
+    <div class="summary-header">
+        <span style="font-size: 1.3em; font-weight: bold;">📊 สรุปจำนวนสถานี <strong id="summary-tambon-name"></strong></span>
+        <span id="summary-check-label" class="check-badge"></span>
+    </div>
+    <div class="summary-stats">
+        <div class="stat-card danger" onclick="showStationList('exceeds')">
+            <div class="stat-icon">🔴</div>
+            <div class="stat-value" id="stat-exceeds">0</div>
+            <div class="stat-label">เกินมาตรฐาน</div>
         </div>
-        
-        <div class="summary-footer">
-            <small>สิ่งที่ตรวจ: <strong id="summary-param-name"></strong></small>
+        <div class="stat-card safe" onclick="showStationList('normal')">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-value" id="stat-normal">0</div>
+            <div class="stat-label">ปกติ</div>
+        </div>
+        <div class="stat-card no-data" onclick="showStationList('noData')">
+            <div class="stat-icon">⚪</div>
+            <div class="stat-value" id="stat-nodata">0</div>
+            <div class="stat-label">ไม่มีข้อมูล</small></div>
+        </div>
+        <div class="stat-card total">
+            <div class="stat-icon">📍</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">ทั้งหมด</div>
         </div>
     </div>
+    <div class="summary-footer">
+        <small>สิ่งที่ตรวจ: <strong id="summary-param-name"></strong></small>
+    </div>
+    
+    <!-- Card แสดงรายชื่อสถานี (แทน Modal) -->
+    <div id="station-list-card" class="station-list-card" style="display: none; margin-top: 20px;">
+        <div class="station-list-header">
+            <h4 id="station-list-title" style="margin: 0; color: #2c3e50;">📋 รายชื่อสถานี</h4>
+            <button onclick="closeStationList()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666;">&times;</button>
+        </div>
+        <div id="station-list-content" class="station-list-content">
+            <!-- รายชื่อสถานีจะถูกเติมด้วย JavaScript -->
+        </div>
+    </div>
+</div>
 
             </div>
         <!-- Chart Panel -->
@@ -318,23 +327,30 @@ async function updateMapMarkers() {
         console.log('⏳ Map or data not ready');
         return;
     }
-
+    
     // ลบล้างมาร์คเกอร์เก่า
     markers.forEach(m => mapInstance.removeLayer(m));
     markers = [];
-
+    
+    // ✅ รีเซ็ตข้อมูลสถานี
+    stationLists = {
+        exceeds: [],
+        normal: [],
+        noData: []
+    };
+    
     const paramKey = document.getElementById('param-select').value;
     const tambonFilter = document.getElementById('tambon-select').value;
     const selectedCheck = document.getElementById('check-select').value;
     const standard = standards[currentTab]?.[paramKey];
-
+    
     if (!paramKey || !tambonData) {
         document.getElementById('station-summary-box').style.display = 'none';
         return;
     }
-
+    
     let currentData;
-
+    
     // ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
     if (selectedCheck === 'latest') {
         currentData = currentTab === 'water' ?
@@ -356,30 +372,36 @@ async function updateMapMarkers() {
             return;
         }
     }
-
+    
     if (!currentData) {
         document.getElementById('station-summary-box').style.display = 'none';
         return;
     }
-
-    // นับสถานีทั้งหมด (ไม่กรองตามตำบล)
+    
+    // นับจำนวนสถานีทั้งหมด (ทุกตำบลรวมกัน)
     let exceeds = 0, normal = 0, noData = 0;
-
-    // วนลูปทุกสถานีใน stationsInfo (นับทั้งหมด)
+    
+    // วนลูปทุกสถานีใน stationsInfo (ไม่กรองตามตำบล)
     stationsInfo.forEach(st => {
         if (!st.lat || !st.lon) return;
-
+        
         let stationValue = null;
         let isDanger = false;
-
+        let displayValue = 'ไม่มีข้อมูล';
+        
         // ค้นหาข้อมูลของสถานีนี้ (ค้นหาในทุกตำบล)
         for (const tambon in currentData) {
             const stationDataList = currentData[tambon] || [];
             const stationData = stationDataList.find(d => d.station === st.id);
-
+            
             if (stationData && stationData.value !== null) {
                 stationValue = stationData.value;
-
+                
+                // แสดงค่าพร้อมสัญลักษณ์ < >
+                let rawValue = stationData.raw_value || stationValue;
+                displayValue = rawValue && typeof rawValue === 'string' && 
+                    (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
+                
                 // แยกการเปรียบเทียบน้ำและดิน
                 if (currentTab === 'water') {
                     if (typeof standard === 'number' && stationValue > standard) {
@@ -393,42 +415,54 @@ async function updateMapMarkers() {
                 break;
             }
         }
-
+        
+        // เก็บข้อมูลสถานีตามสถานะ
+        const stationInfo = {
+            id: st.id,
+            name: st.name,
+            tambon: st.tambon,
+            value: displayValue,
+            isDanger: isDanger
+        };
+        
         // นับจำนวนตามสถานะ
         if (stationValue === null || stationValue === undefined) {
             noData++;
+            stationLists.noData.push(stationInfo);
         } else if (isDanger) {
             exceeds++;
+            stationLists.exceeds.push(stationInfo);
         } else {
             normal++;
+            stationLists.normal.push(stationInfo);
         }
     });
-
-    // อัปเดตสรุปทันที (ก่อนสร้าง marker)
+    
+    // แสดงสรุปจำนวนสถานี (เรียกฟังก์ชันแยก)
     updateStationSummary(paramKey, currentTab, selectedCheck, exceeds, normal, noData);
-
+    
     // สร้างมาร์คเกอร์บนแผนที่ (แสดงเฉพาะตำบลที่เลือก)
-    const tambonStations = stationsInfo.filter(st => st.tambon === tambonFilter);
-    tambonStations.forEach(st => {
+    stationsInfo.forEach(st => {
         if (!st.lat || !st.lon) return;
-
+        if (st.tambon !== tambonFilter) return;
+        
         let isDanger = false;
         let stationValue = null;
         let checkNumber = selectedCheck === 'latest' ?
             (currentTab === 'water' ? tambonData.water_latest_check : tambonData.soil_latest_check) :
             selectedCheck;
-
+        
         // ค้นหาข้อมูลในรอบที่เลือก
         const stationDataList = currentData[tambonFilter] || [];
         const stationData = stationDataList.find(d =>
             d.station === st.id &&
             d.check_number === (selectedCheck === 'latest' ? checkNumber : selectedCheck)
         );
-
+        
         if (stationData && stationData.value !== null) {
             stationValue = stationData.value;
             checkNumber = stationData.check_number;
-
+            
             if (currentTab === 'water') {
                 if (typeof standard === 'number' && stationValue > standard) {
                     isDanger = true;
@@ -439,26 +473,28 @@ async function updateMapMarkers() {
                 }
             }
         }
-
+        
         const markerClass = stationValue !== null ? (isDanger ? 'danger' : 'safe') : 'no-data';
+        
         const customIcon = L.divIcon({
             className: 'custom-marker',
             html: `<div class="marker-dot ${markerClass}"></div>`,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
         });
-
+        
         const marker = L.marker([st.lat, st.lon], { icon: customIcon }).addTo(mapInstance);
-
+        
         let rawValue = null;
         if (stationData && stationData.raw_value) {
             rawValue = stationData.raw_value;
         }
-
-        const displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
+        
+        const displayValue = rawValue && typeof rawValue === 'string' && 
+            (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
         const valueText = displayValue !== null ? `${displayValue}` : 'ไม่มีข้อมูล';
         const statusText = stationValue === null ? '⚪ ไม่มีข้อมูล' : (isDanger ? '🔴 เกินมาตรฐาน' : '🟢 ปกติ');
-
+        
         marker.bindPopup(`
             <div style="text-align:center;min-width:200px;padding:5px;">
                 <strong style="color:#2c3e50;">${st.name}</strong><br>
@@ -468,7 +504,7 @@ async function updateMapMarkers() {
                 <span style="color:${isDanger ? '#e74c3c' : (stationValue !== null ? '#27ae60' : '#95a5a6')};font-weight:600;display:block;margin:5px 0;">${statusText}</span>
                 <strong style="color:#2c3e50;">${st.id}</strong><br>
             </div>`);
-
+        
         markers.push(marker);
     });
 }
@@ -477,7 +513,7 @@ async function updateMapMarkers() {
 function createAnnotations(paramKey, dataType, unit) {
     const annotations = {};
     
-    // ✅ Mapping ชื่ออังกฤษ -> ไทย (ถ้า API ส่งภาษาอังกฤษมา)
+    // Mapping ชื่ออังกฤษ -> ไทย (ถ้า API ส่งภาษาอังกฤษมา)
     const paramMap = {
         'As': 'สารหนู', 'Pb': 'ตะกั่ว', 'Cd': 'แคดเมียม',
         'Cr': 'โครเมียม', 'Ni': 'นิกเกิล', 'Cu': 'ทองแดง', 'Zn': 'สังกะสี'
@@ -500,7 +536,7 @@ function createAnnotations(paramKey, dataType, unit) {
                 borderColor: '#e74c3c', borderWidth: 2, borderDash: [6, 6],
                 label: {
                     display: true,
-                    content: `ค่ามาตรฐาน: ${stdValue}`,
+                    content: `ค่ามาตรฐาน: < ${stdValue}`,
                     position: 'end',
                     backgroundColor: '#e74c3c',
                     color: 'white',
@@ -529,7 +565,7 @@ function createAnnotations(paramKey, dataType, unit) {
                 type: 'line', yMin: std.safe, yMax: std.safe,
                 borderColor: '#3498db', borderWidth: 2, borderDash: [6, 6],
                 label: {
-                    display: true, content: `มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤${std.safe}`,
+                    display: true, content: `มาตรฐานคุณภาพตะกอนดินระดับที่ปลอดภัยต่อสัตว์หน้าดิน: ≤ ${std.safe}`,
                     position: 'start', backgroundColor: '#3498db',
                     color: 'white', font: { size: 12, family: "'Noto Sans Thai', sans-serif" }
                 }
@@ -538,7 +574,7 @@ function createAnnotations(paramKey, dataType, unit) {
                 type: 'line', yMin: std.unsafe, yMax: std.unsafe,
                 borderColor: '#e74c3c', borderWidth: 2, borderDash: [6, 6],
                 label: {
-                    display: true, content: `มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥${std.unsafe}`,
+                    display: true, content: `มาตรฐานคุณภาพตะกอนดินระดับที่เป็นอันตรายต่อสัตว์หน้าดินอย่างรุนแรง: ≥ ${std.unsafe}`,
                     position: 'end', backgroundColor: '#e74c3c',
                     color: 'white', font: { size: 12, family: "'Noto Sans Thai', sans-serif" }
                 }
@@ -905,7 +941,6 @@ function predictTrend(dataPoints, paramName, dataType) {
     };
 }
 
-// ===== ฟังก์ชันคำนวณและแสดงสรุปจำนวนสถานี =====
 function updateStationSummary(paramKey, dataType, selectedCheck, exceeds, normal, noData) {
     const summaryBox = document.getElementById('station-summary-box');
     if (!summaryBox) return;
@@ -915,7 +950,6 @@ function updateStationSummary(paramKey, dataType, selectedCheck, exceeds, normal
     
     // อัปเดตข้อความ
     document.getElementById('summary-param-name').textContent = paramKey;
-    
     const checkLabel = selectedCheck === 'latest' ?
         `(ล่าสุด: ${dataType === 'water' ? tambonData.water_latest_check : tambonData.soil_latest_check})` :
         `(รอบ: ${selectedCheck})`;
@@ -939,12 +973,150 @@ function updateStationSummary(paramKey, dataType, selectedCheck, exceeds, normal
         summaryBox.className = 'station-summary stable';
     }
     
+    // เพิ่มคลิกเพื่อดูรายชื่อสถานี
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach(card => {
+        card.style.cursor = 'pointer';
+        card.onclick = null;
+    });
+    
+    document.querySelector('.stat-card.danger').onclick = () => showStationList('exceeds', paramKey);
+    document.querySelector('.stat-card.safe').onclick = () => showStationList('normal', paramKey);
+    document.querySelector('.stat-card.no-data').onclick = () => showStationList('noData', paramKey);
+    
     // แสดงกล่อง
     summaryBox.style.display = 'block';
     
-    console.log(`✅ Station Summary (All Tambons): ${exceeds} exceeds, ${normal} normal, ${noData} no data, ${total} total`);
+    console.log(`✅ Station Summary: ${exceeds} exceeds, ${normal} normal, ${noData} no data, ${total} total`);
+    
+    // แสดงคำแนะนำเมื่อมีสถานีที่เกินมาตรฐาน
+    showHealthAdvice(exceeds, normal, noData, paramKey);
 }
 
+// ===== ฟังก์ชันแสดงรายชื่อสถานี (Card แทน Modal) =====
+function showStationList(type) {
+    const card = document.getElementById('station-list-card');
+    const cardTitle = document.getElementById('station-list-title');
+    const cardContent = document.getElementById('station-list-content');
+    
+    // กำหนดหัวข้อตามประเภท
+    const titles = {
+        'exceeds': '🔴 สถานีที่เกินมาตรฐาน',
+        'normal': '🟢 สถานีปกติ',
+        'noData': '⚪ สถานีที่ไม่มีข้อมูล'
+    };
+    
+    cardTitle.textContent = titles[type];
+    
+    // ดึงข้อมูลสถานี
+    let stations = stationLists[type] || [];
+    
+    // เรียงลำดับจากมากไปน้อย (สำหรับ exceeds และ normal)
+    if (type !== 'noData') {
+        stations = [...stations].sort((a, b) => {
+            // แปลงค่าเป็นตัวเลขสำหรับเปรียบเทียบ
+            const valueA = parseFloat(String(a.value).replace(/[^0-9.-]/g, '')) || 0;
+            const valueB = parseFloat(String(b.value).replace(/[^0-9.-]/g, '')) || 0;
+            return valueB - valueA; // เรียงจากมากไปน้อย (Descending)
+        });
+    }
+    
+    if (stations.length === 0) {
+        cardContent.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: #888;">
+                <div style="font-size: 40px; margin-bottom: 10px;">📭</div>
+                <p>ไม่มีสถานีในหมวดหมู่นี้</p>
+            </div>
+        `;
+    } else {
+        // ✅ แสดงอันดับที่ (#1, #2, #3...)
+        cardContent.innerHTML = stations.map((st, index) => `
+            <div class="station-list-item ${type}">
+                <div class="station-rank" style="min-width: 30px; font-weight: bold; color: #666; font-size: 0.9em;">
+                    ${index + 1}
+                </div>
+                <div class="station-info" style="flex: 1;">
+                    <div class="station-name">${st.name}</div>
+                    <div class="station-detail">ตำบล: ${st.tambon} | รหัส: ${st.id}</div>
+                </div>
+                <div class="station-value ${type}" style="font-weight: 600; min-width: 80px; text-align: right;">
+                    ${st.value !== null ? st.value : 'ไม่มีข้อมูล'}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // แสดง Card
+    card.style.display = 'block';
+    // Scroll ไปยัง Card
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ===== ฟังก์ชันปิดรายชื่อสถานี =====
+function closeStationList() {
+    const card = document.getElementById('station-list-card');
+    card.style.display = 'none';
+}
+
+// ===== ฟังก์ชันแสดงคำแนะนำเมื่อเกินมาตรฐาน =====
+function showHealthAdvice(exceeds, normal, noData, paramKey) {
+    // ลบการ์ดคำแนะนำเก่า (ถ้ามี)
+    const existingAdvice = document.getElementById('health-advice-card');
+    if (existingAdvice) {
+        existingAdvice.remove();
+    }
+    
+    // ถ้าไม่มีสถานีที่เกินมาตรฐาน ไม่ต้องแสดง
+    if (exceeds === 0) {
+        return;
+    }
+    
+    // สร้างการ์ดคำแนะนำ
+    const trendBox = document.getElementById('trend-prediction-box');
+    if (!trendBox) return;
+    
+    const adviceCard = document.createElement('div');
+    adviceCard.id = 'health-advice-card';
+    adviceCard.className = 'health-advice-card';
+    
+    // คำแนะนำตามพารามิเตอร์
+    const adviceData = {
+        'สารหนู': {
+            title: '⚠️ ข้อควรระวังเกี่ยวกับสารหนู',
+            advice: [
+                'หากค่าที่ตรวจพบเกินมาตรฐาน(มากกว่า 10 ไมโครกรัมต่อลิตร หรือ 0.01 มิลลิกรัมต่อลิตร) อาจะส่งผลกระทบต่อสุขภาพอนามัย',
+                'หากจะนำไปอุปโภค-บริโภค ต้องผ่านการปรับปรุงคุณภาพก่อนและอาจเป็นอันตรายต่อสัตว์น้ำ',
+                'ไม่ควรทำการประมงหรือกิจกรรมทางน้ำ',
+            ]
+        },
+        'แคดเมียม': {
+            title: '⚠️ ข้อควรระวังเกี่ยวกับแคดเมียม',
+            advice: [
+                'หากค่าที่ตรวจพบเกินมาตรฐาน 0.005 มก./ล. ในน้ำที่มีความกระด้าง น้อยกว่า 100 มก./ล. ถ้าน้ำมีความกระด้างน้อย แคดเมียมจะอยู่ในรูปที่มีความพิษ',
+                'หากค่าที่ตรวจพบเกินมาตรฐาน 0.05 มก./ล. ในน้ำที่มีความกระด้าง มากกว่า 100 มก./ล. ถ้าน้ำมีความกระด้างมาก แคดเมียมจะมีความเป็นพิษน้อย',
+            ]
+        },
+    };
+    
+    const advice = adviceData[paramKey] || adviceData['default'];
+    
+    adviceCard.innerHTML = `
+        <div class="advice-header">
+            <h4 style="margin: 0; color: #e74c3c;">${advice.title}</h4>
+        </div>
+            
+            <div class="advice-section" style="margin-top: 10px;">
+                <strong style="color: #2c3e50;">คำแนะนำ:</strong>
+                <ul style="margin: 5px 0 0 20px; color: #666; font-size: 0.9em; padding-left: 0;">
+                    ${advice.advice.map(item => `<li style="margin-bottom: 4px;">${item}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // แทรกการ์ดหลัง trend box
+    trendBox.parentNode.insertBefore(adviceCard, trendBox.nextSibling);
+}
 
 // ===== ส่วนข่าวสาร =====
 let newsData = [];
