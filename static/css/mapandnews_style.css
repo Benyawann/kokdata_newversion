@@ -1490,3 +1490,270 @@ body {
         flex: 1;
     }
 }
+
+/* ===== Station List Card (Scrollable) ===== */
+.station-list-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.station-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: white;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.station-list-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* Custom Scrollbar */
+.station-list-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.station-list-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.station-list-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.station-list-content::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+.station-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.station-list-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.station-list-item.exceeds {
+    background: #fff5f5;
+}
+
+.station-list-item.normal {
+    background: #f0fff4;
+}
+
+.station-list-item.noData {
+    background: #f8f9fa;
+}
+
+.station-info {
+    flex: 1;
+}
+
+.station-name {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95em;
+    margin-bottom: 4px;
+}
+
+.station-detail {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.station-value {
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    min-width: 80px;
+    text-align: center;
+}
+
+.station-value.exceeds {
+    background: #ffebee;
+    color: #e74c3c;
+}
+
+.station-value.normal {
+    background: #e8f5e9;
+    color: #27ae60;
+}
+
+.station-value.noData {
+    background: #f5f5f5;
+    color: #95a5a6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .station-list-content {
+        max-height: 250px;
+    }
+    
+    .station-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .station-value {
+        width: 100%;
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .station-list-content {
+        max-height: 200px;
+    }
+    
+    .station-name {
+        font-size: 0.9em;
+    }
+    
+    .station-detail {
+        font-size: 0.75em;
+    }
+}
+
+/* ทำให้ stat cards คลิกได้ */
+.stat-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-card.danger:hover {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.stat-card.safe:hover {
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.stat-card.no-data:hover {
+    box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
+}
+
+/* ===== Health Advice Card ===== */
+.health-advice-card {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
+    border: 2px solid #e74c3c;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 15px;
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.advice-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e74c3c;
+}
+
+.advice-icon {
+    font-size: 1.5em;
+}
+
+.advice-content {
+    margin-bottom: 15px;
+}
+
+.advice-section {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.advice-section strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.95em;
+}
+
+.advice-section p,
+.advice-section ul {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.6;
+}
+
+.advice-section li {
+    margin-bottom: 4px;
+}
+
+.advice-footer {
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px dashed #e74c3c;
+    font-size: 0.85em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .health-advice-card {
+        padding: 15px;
+    }
+    
+    .advice-header h4 {
+        font-size: 1em;
+    }
+    
+    .advice-section {
+        padding: 10px;
+    }
+    
+    .advice-footer {
+        font-size: 0.8em;
+    }
+}
+
+@media (max-width: 480px) {
+    .advice-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .advice-section p,
+    .advice-section ul {
+        padding-left: 0;
+    }
+}
