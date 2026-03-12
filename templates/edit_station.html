@@ -120,14 +120,14 @@ function createRow(type, checkCount, data = null) {
     paramCell.appendChild(paramInput);
     row.appendChild(paramCell);
 
-    // ✅ ช่องครั้งที่ 1 ถึง checkCount (แก้ key ให้ตรง)
+    // ช่องครั้งที่ 1 ถึง checkCount (แก้ key ให้ตรง)
     for (let i = 1; i <= checkCount; i++) {
         const cell = document.createElement('td');
         const input = document.createElement('input');
         input.type = 'text';
         input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;
         
-        // ✅ สร้าง key ให้ตรงกับ Python: 'ครั้งที่ 1', 'ครั้งที่ 2', ...
+        // สร้าง key ให้ตรงกับ Python: 'ครั้งที่ 1', 'ครั้งที่ 2', ...
         const checkKey = `ครั้งที่ ${i}`;
         if (data && data.checks && data.checks[checkKey]) {
             input.value = data.checks[checkKey];
