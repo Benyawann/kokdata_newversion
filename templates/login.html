@@ -33,7 +33,7 @@
             </form>
         </div>
     </div>
-    <!-- ✅ Modal Popup -->
+    <!-- Modal Popup -->
     <div id="loginModal" class="modal-overlay">
         <div class="modal-container">
             <div id="modalIcon" class="modal-icon">✅</div>
@@ -46,7 +46,7 @@
     </div>
 
     <script>
-    // ✅ ฟังก์ชันแสดง Modal
+    // ฟังก์ชันแสดง Modal
     function showModal(type, title, message, onConfirm = null) {
         const modal = document.getElementById('loginModal');
         const modalIcon = document.getElementById('modalIcon');
@@ -86,7 +86,7 @@
         document.addEventListener('keydown', handleEsc);
     }
         
-    // ✅ แสดง Flash Message ผ่าน Modal
+    // แสดง Flash Message ผ่าน Modal
     document.addEventListener('DOMContentLoaded', () => {
         const flashMsg = document.getElementById('flashMessage');
         if (flashMsg && flashMsg.textContent.trim()) {
@@ -94,7 +94,7 @@
         }
     });
         
-    // ✅ จัดการ Submit Form
+    // จัดการ Submit Form
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -135,7 +135,7 @@
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                     
-                // ✅ ตรวจสอบว่า response เป็น JSON หรือไม่
+                // ตรวจสอบว่า response เป็น JSON หรือไม่
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     throw new Error('Backend ไม่ได้คืนค่า JSON - ตรวจสอบ route /login');

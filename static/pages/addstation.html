@@ -83,7 +83,7 @@
         </form>
     </div>
 
-    <!-- ✅ Modal Success (ใหม่) -->
+    <!-- Modal Success (ใหม่) -->
     <div id="successModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-icon success">✅</div>
@@ -95,7 +95,7 @@
         </div>
     </div>
 
-     <!-- ✅ Modal Confirm Reset -->
+     <!-- Modal Confirm Reset -->
     <div id="resetModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-icon warning">⚠️</div>
@@ -191,7 +191,7 @@
         soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, true));
     }
 
-    // ✅ ฟังก์ชันแสดง Modal ทั่วไป (ใช้ทั้ง Confirm Reset และ Success)
+    // ฟังก์ชันแสดง Modal ทั่วไป (ใช้ทั้ง Confirm Reset และ Success)
     function showModal(modalId, onConfirm = null) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
@@ -242,7 +242,7 @@
         return cleanup; // ส่งคืนฟังก์ชัน cleanup สำหรับกรณีพิเศษ
     }
 
-    // ✅ ตรวจสอบว่ามีข้อมูลในฟอร์มหรือไม่
+    // ตรวจสอบว่ามีข้อมูลในฟอร์มหรือไม่
     function hasFormData() {
         const stationFields = ['station', 'river', 'tambon', 'amphoe', 'province', 'location'];
         for (let field of stationFields) {
@@ -293,7 +293,7 @@
             soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, false));
         });
 
-        // ✅ จัดการ Submit Form - แสดง Modal Success แทน alert()
+        // จัดการ Submit Form - แสดง Modal Success แทน alert()
         document.getElementById('stationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -350,9 +350,9 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // ✅ แสดง Modal Success แทน alert()
+                    // แสดง Modal Success แทน alert()
                     showModal('successModal', () => {
-                        // ✅ หลังจากกดตกลง → ล้างฟอร์ม
+                        // หลังจากกดตกลง → ล้างฟอร์ม
                         document.getElementById('stationForm').reset();
                         resetTables();
                     });
@@ -368,7 +368,7 @@
             }
         });
 
-        // ✅ จัดการปุ่มล้างข้อมูล - แสดง Modal Confirm
+        // จัดการปุ่มล้างข้อมูล - แสดง Modal Confirm
         resetBtn.addEventListener('click', function() {
             if (hasFormData()) {
                 showModal('resetModal', () => {

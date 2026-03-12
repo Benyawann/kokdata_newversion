@@ -88,7 +88,7 @@
         </form>
     </div>
 
-    <!-- ✅ Modal Popup -->
+    <!-- Modal Popup -->
     <div id="successModal" class="modal-overlay">
         <div class="modal-container">
             <div id="modalIcon" class="modal-icon success">✅</div>
@@ -209,7 +209,7 @@ function addColumn(type) {
     });
 }
 
-// ✅ ฟังก์ชันแสดง Modal Popup
+// ฟังก์ชันแสดง Modal Popup
 function showModal(type, title, message, onConfirm = null) {
     const modal = document.getElementById('successModal');
     const modalIcon = document.getElementById('modalIcon');
@@ -289,7 +289,7 @@ document.getElementById('stationForm').addEventListener('submit', async (e) => {
         const result = await response.json();
         
         if (result.success) {
-            // ✅ แสดง Modal แทน alert()
+            // แสดง Modal แทน alert()
             showModal('success', 'แก้ไขสำเร็จ', 'ข้อมูลสถานี {{ station.station }} ถูกแก้ไขเรียบร้อยแล้ว', () => {
                 window.location.href = `/station/{{ station.station }}`;
             });

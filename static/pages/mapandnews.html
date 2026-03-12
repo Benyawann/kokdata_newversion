@@ -37,7 +37,7 @@
         <div class="map-panel-report">
             <h3>🗺️ แผนที่จุดตรวจวัด</h3>
             <div id="map"></div>
-            <!-- ✅ สรุปจำนวนสถานี (เพิ่มใหม่) -->
+            <!-- สรุปจำนวนสถานี-->
             <div id="station-summary-box" class="station-summary" style="display: none; margin-top: 20px;">
                 <div class="summary-header">
                     <span style="font-size: 1.3em; font-weight: bold;">📊 สรุปจำนวนสถานี <strong id="summary-tambon-name"></strong></span>
@@ -261,7 +261,7 @@ function populateParamDropdown() {
         select.innerHTML += `<option value="${param}">${param} ${unit}</option>`;
     });
     
-    // ✅ เลือกพารามิเตอร์แรกเป็นค่าเริ่มต้น (ถ้ามี)
+    // เลือกพารามิเตอร์แรกเป็นค่าเริ่มต้น (ถ้ามี)
     if (params.length > 0 && !select.value) {
         select.value = params[0];
     }
@@ -277,12 +277,12 @@ function populateCheckDropdown() {
     const soilChecks = tambonData.soil?.check_numbers || [];
     const currentChecks = currentTab === 'water' ? waterChecks : soilChecks;
     
-    // ✅ ดึงค่าล่าสุดของประเภทข้อมูลปัจจุบัน
+    // ดึงค่าล่าสุดของประเภทข้อมูลปัจจุบัน
     const latestCheck = currentTab === 'water' 
         ? tambonData.water_latest_check 
         : tambonData.soil_latest_check;
     
-    // ✅ สร้างตัวเลือกแรกโดยแสดงค่าล่าสุดจากฐานข้อมูล
+    // สร้างตัวเลือกแรกโดยแสดงค่าล่าสุดจากฐานข้อมูล
     const latestText = latestCheck ? `${latestCheck} (ล่าสุด)` : 'กำลังโหลด...';
     
     const selectedValue = select.value;
@@ -335,7 +335,7 @@ async function updateMapMarkers() {
 
     let currentData;
 
-    // ✅ ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
+    // ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
     if (selectedCheck === 'latest') {
         currentData = currentTab === 'water' ?
             tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
@@ -362,7 +362,7 @@ async function updateMapMarkers() {
         return;
     }
 
-    // ✅ ✅ ✅ นับสถานีทั้งหมด (ไม่กรองตามตำบล)
+    // นับสถานีทั้งหมด (ไม่กรองตามตำบล)
     let exceeds = 0, normal = 0, noData = 0;
 
     // วนลูปทุกสถานีใน stationsInfo (นับทั้งหมด)
@@ -404,10 +404,10 @@ async function updateMapMarkers() {
         }
     });
 
-    // ✅ อัปเดตสรุปทันที (ก่อนสร้าง marker)
+    // อัปเดตสรุปทันที (ก่อนสร้าง marker)
     updateStationSummary(paramKey, currentTab, selectedCheck, exceeds, normal, noData);
 
-    // ✅ สร้างมาร์คเกอร์บนแผนที่ (แสดงเฉพาะตำบลที่เลือก)
+    // สร้างมาร์คเกอร์บนแผนที่ (แสดงเฉพาะตำบลที่เลือก)
     const tambonStations = stationsInfo.filter(st => st.tambon === tambonFilter);
     tambonStations.forEach(st => {
         if (!st.lat || !st.lon) return;
@@ -794,11 +794,11 @@ function switchTab(mode) {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📊 Tambon Chart page loaded');
     
-    // ✅ 1. โหลดข้อมูลจาก API ก่อน
+    // 1. โหลดข้อมูลจาก API ก่อน
     const dataLoaded = await fetchTambonData();
     
     if (dataLoaded) {
-        // ✅ 2. ตั้งค่าเริ่มต้นให้ dropdown มีค่าที่เลือก
+        // 2. ตั้งค่าเริ่มต้นให้ dropdown มีค่าที่เลือก
         const tambonSelect = document.getElementById('tambon-select');
         const paramSelect = document.getElementById('param-select');
         
@@ -819,7 +819,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }, 25); 
         }, 5);
         
-        // ✅4. อัปเดตแผนภูมิ
+        // 4. อัปเดตแผนภูมิ
         updateChartByTambon();
     }
     
@@ -921,7 +921,7 @@ function updateStationSummary(paramKey, dataType, selectedCheck, exceeds, normal
         `(รอบ: ${selectedCheck})`;
     document.getElementById('summary-check-label').textContent = checkLabel;
     
-    // ✅ อัปเดตตัวเลข
+    // อัปเดตตัวเลข
     document.getElementById('stat-exceeds').textContent = exceeds;
     document.getElementById('stat-normal').textContent = normal;
     document.getElementById('stat-nodata').textContent = noData;

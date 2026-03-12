@@ -320,7 +320,7 @@
         {% endif %}
     </div>
 
-        <!-- ✅ Modal Confirm Delete Station -->
+        <!-- Modal Confirm Delete Station -->
     <div id="deleteModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-icon warning">⚠️</div>
@@ -333,7 +333,7 @@
         </div>
     </div>
 
-    <!-- ✅ Modal Success After Delete (ใหม่) -->
+    <!-- Modal Success After Delete (ใหม่) -->
     <div id="deleteSuccessModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-icon success">✅</div>
@@ -346,7 +346,7 @@
     </div>
 
 <script>
-// ✅ ฟังก์ชันแสดง Modal Confirm Delete
+// ฟังก์ชันแสดง Modal Confirm Delete
 function showDeleteModal(stationCode, onConfirm) {
     const modal = document.getElementById('deleteModal');
     const modalMessage = document.getElementById('deleteModalMessage');
@@ -397,7 +397,7 @@ function showDeleteModal(stationCode, onConfirm) {
     document.addEventListener('keydown', handleEsc);
 }
 
-// ✅ ฟังก์ชันแสดง Modal Confirm Delete
+// ฟังก์ชันแสดง Modal Confirm Delete
 function showDeleteModal(stationCode, onConfirm) {
     const modal = document.getElementById('deleteModal');
     const modalMessage = document.getElementById('deleteModalMessage');
@@ -445,7 +445,7 @@ function showDeleteModal(stationCode, onConfirm) {
     document.addEventListener('keydown', handleEsc);
 }
 
-// ✅ ฟังก์ชันแสดง Modal Success After Delete
+// ฟังก์ชันแสดง Modal Success After Delete
 function showDeleteSuccessModal(stationCode, onConfirm) {
     const modal = document.getElementById('deleteSuccessModal');
     const modalMessage = document.getElementById('deleteSuccessMessage');
@@ -487,7 +487,7 @@ function showDeleteSuccessModal(stationCode, onConfirm) {
     document.addEventListener('keydown', handleEsc);
 }
 
-// ✅ แก้ไขฟังก์ชัน deleteStation ให้ใช้ Modal ทั้ง Confirm และ Success
+// แก้ไขฟังก์ชัน deleteStation ให้ใช้ Modal ทั้ง Confirm และ Success
 function deleteStation(stationCode) {
     showDeleteModal(stationCode, () => {
         fetch(`/delete-station/${stationCode}`, {
@@ -496,7 +496,7 @@ function deleteStation(stationCode) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // ✅ แสดง Modal Success แทน alert()
+                // แสดง Modal Success แทน alert()
                 showDeleteSuccessModal(stationCode, () => {
                     window.location.href = '/'; // กลับไปหน้าหลัก
                 });

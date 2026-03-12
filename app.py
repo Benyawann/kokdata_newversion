@@ -53,7 +53,7 @@ def init_db():
             )
         """)
         
-        # ✅ ตารางข้อมูลน้ำ — ใช้ station TEXT (ไม่ใช่ station_id)
+        # ตารางข้อมูลน้ำ — ใช้ station TEXT (ไม่ใช่ station_id)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS water_data (
                 id SERIAL PRIMARY KEY,
@@ -63,7 +63,7 @@ def init_db():
             )
         """)
         
-        # ✅ ตารางข้อมูลดิน — ใช้ station TEXT เช่นกัน
+        # ตารางข้อมูลดิน — ใช้ station TEXT เช่นกัน
         cur.execute("""
             CREATE TABLE IF NOT EXISTS soil_data (
                 id SERIAL PRIMARY KEY,
@@ -82,7 +82,7 @@ def init_db():
             )
         """)
         
-        # ✅ Indexes — ใช้ชื่อคอลัมน์ที่ถูกต้อง (station)
+        # Indexes — ใช้ชื่อคอลัมน์ที่ถูกต้อง (station)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_water_station ON water_data(station)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_soil_station ON soil_data(station)")
         
@@ -139,7 +139,7 @@ def login():
         
         print(f"🔍 DEBUG: login attempt - username='{username}'")
         
-        # ✅ ตรวจสอบว่าเป็น AJAX request หรือไม่
+        # ตรวจสอบว่าเป็น AJAX request หรือไม่
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
         conn = get_db()
@@ -151,19 +151,19 @@ def login():
         print(f"🔍 DEBUG: DB result - {row}")
         
         if row and row['password'] == password:
-            # ✅ เข้าสู่ระบบสำเร็จ
+            # เข้าสู่ระบบสำเร็จ
             session['logged_in'] = True
             session['username'] = username
             
             if is_ajax:
-                # ✅ คืนค่า JSON สำหรับ AJAX
+                # คืนค่า JSON สำหรับ AJAX
                 return jsonify({
                     'success': True,
                     'message': 'เข้าสู่ระบบสำเร็จ',
                     'redirect_url': url_for('index')
                 })
             else:
-                # ✅ Redirect สำหรับ form submit ปกติ (รองรับกรณีไม่มี JS)
+                # Redirect สำหรับ form submit ปกติ (รองรับกรณีไม่มี JS)
                 return redirect(url_for('index'))
         else:
             # ❌ เข้าสู่ระบบไม่สำเร็จ
@@ -176,7 +176,7 @@ def login():
                 flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณากรอกใหม่', 'error')
                 return redirect(url_for('login'))
     
-    # ✅ GET request: แสดงหน้า login
+    # GET request: แสดงหน้า login
     return render_template('login.html')
 
 # === Logout Route ===
@@ -560,7 +560,7 @@ def delete_station(station_code):
         conn = get_db()
         cur = conn.cursor()
         
-        # ✅ ON DELETE CASCADE จะลบ water_data และ soil_data ให้เอง
+        # ON DELETE CASCADE จะลบ water_data และ soil_data ให้เอง
         # ลบแค่ station_data ก็พอ
         cur.execute('DELETE FROM station_data WHERE station = %s', (station_code.strip(),))
         
@@ -680,7 +680,7 @@ def edit_station(station_code):
         conn = get_db()
         cur = conn.cursor()
 
-        # ✅ ดึงข้อมูลสถานี (แยก execute กับ fetchone)
+        # ดึงข้อมูลสถานี (แยก execute กับ fetchone)
         cur.execute("""
             SELECT river, station, location, tambon, amphoe, province
             FROM station_data WHERE station = %s
@@ -691,7 +691,7 @@ def edit_station(station_code):
             conn.close()
             return "ไม่พบสถานี", 404
 
-        # ✅ ดึงข้อมูลน้ำ (แยก execute กับ fetchall)
+        # ดึงข้อมูลน้ำ (แยก execute กับ fetchall)
         cur.execute(r"""
             SELECT parameter, unit, check_number, value
             FROM water_data WHERE station = %s
@@ -701,7 +701,7 @@ def edit_station(station_code):
         """, (station_code.strip(),))
         water_rows = cur.fetchall()  # ← แยกจาก execute()
 
-        # ✅ ดึงข้อมูลดิน (แยก execute กับ fetchall)
+        # ดึงข้อมูลดิน (แยก execute กับ fetchall)
         cur.execute(r"""
             SELECT parameter, check_number, value
             FROM soil_data WHERE station = %s
@@ -779,7 +779,7 @@ def map_page(station_code):
     # 4. ส่งข้อมูลไป template
     return render_template(
         'mapandnews.html',
-        station=station,      # ✅ ส่ง object ทั้งก้อน
+        station=station,      # ส่ง object ทั้งก้อน
         water_data=water_data,
         soil_data=soil_data
     )
@@ -888,15 +888,15 @@ def api_map_latest_data():
         conn = get_db()
         cur = conn.cursor()
         
-        # ✅ ดึงพารามิเตอร์น้ำพร้อมหน่วย
+        # ดึงพารามิเตอร์น้ำพร้อมหน่วย
         cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
         water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
         
-        # ✅ ดึงพารามิเตอร์ดิน
+        # ดึงพารามิเตอร์ดิน
         cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
         soil_params = [row['parameter'] for row in cur.fetchall()]
         
-        # ✅ ดึงค่าล่าสุดของน้ำ (ใช้ DISTINCT ON + ORDER BY เพื่อเอาแถวสุดท้าย)
+        # ดึงค่าล่าสุดของน้ำ (ใช้ DISTINCT ON + ORDER BY เพื่อเอาแถวสุดท้าย)
         water_latest = {}
         for param in water_params:
             cur.execute("""
@@ -918,7 +918,7 @@ def api_map_latest_data():
                         'check_number': row['check_number']
                     }
         
-        # ✅ ดึงค่าล่าสุดของดิน
+        # ดึงค่าล่าสุดของดิน
         soil_latest = {}
         for param in soil_params:
             cur.execute("""
@@ -986,7 +986,7 @@ def api_latest_by_tambon():
         cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
         soil_params = [row['parameter'] for row in cur.fetchall()]
         
-        # ✅ 1. ดึง check_numbers ทั้งหมดของน้ำ (เรียงจากใหม่ไปเก่า)
+        # 1. ดึง check_numbers ทั้งหมดของน้ำ (เรียงจากใหม่ไปเก่า)
         cur.execute("""
         SELECT check_number
         FROM (
@@ -998,8 +998,8 @@ def api_latest_by_tambon():
         """)
         water_checks = [row['check_number'] for row in cur.fetchall()]
         
-        # ✅ 2. ดึง check_numbers ทั้งหมดของดิน (เรียงจากใหม่ไปเก่า)
-        # ✅ ดึง check_numbers ทั้งหมดของดิน
+        # 2. ดึง check_numbers ทั้งหมดของดิน (เรียงจากใหม่ไปเก่า)
+        # ดึง check_numbers ทั้งหมดของดิน
         cur.execute("""
         SELECT check_number
         FROM (
@@ -1011,11 +1011,11 @@ def api_latest_by_tambon():
         """)
         soil_checks = [row['check_number'] for row in cur.fetchall()]
         
-        # ✅ 3. หารอบตรวจวัดล่าสุดของน้ำและดิน
+        # 3. หารอบตรวจวัดล่าสุดของน้ำและดิน
         water_latest_check = water_checks[0] if water_checks else None
         soil_latest_check = soil_checks[0] if soil_checks else None
         
-        # ✅ 4. กรณีไม่มีข้อมูลเลย
+        # 4. กรณีไม่มีข้อมูลเลย
         if not water_latest_check and not soil_latest_check:
             tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
             conn.close()
@@ -1037,7 +1037,7 @@ def api_latest_by_tambon():
                 }
             })
         
-        # ✅ 5. ดึงข้อมูลน้ำเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
+        # 5. ดึงข้อมูลน้ำเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
         water_latest = {}
         if water_latest_check:
             for param in water_params:
@@ -1073,7 +1073,7 @@ def api_latest_by_tambon():
                         'check_number': row['check_number']
                     })
         
-        # ✅ 6. ดึงข้อมูลดินเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
+        # 6. ดึงข้อมูลดินเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
         soil_latest = {}
         if soil_latest_check:
             for param in soil_params:
@@ -1121,12 +1121,12 @@ def api_latest_by_tambon():
             'water': {
                 'parameters': water_params,
                 'latest': water_latest,
-                'check_numbers': water_checks  # ✅ เพิ่ม: รายการรอบตรวจวัดของน้ำ
+                'check_numbers': water_checks  # เพิ่ม: รายการรอบตรวจวัดของน้ำ
             },
             'soil': {
                 'parameters': soil_params,
                 'latest': soil_latest,
-                'check_numbers': soil_checks  # ✅ เพิ่ม: รายการรอบตรวจวัดของดิน
+                'check_numbers': soil_checks  # เพิ่ม: รายการรอบตรวจวัดของดิน
             }
         })
         
@@ -1273,7 +1273,7 @@ def get_ryt9_news():
     """ดึงข่าวจากทุกแหล่งในฐานข้อมูล"""
     now = time.time()
     
-    # ✅ ดึงแหล่งข่าวจาก Database (มี cache)
+    # ดึงแหล่งข่าวจาก Database (มี cache)
     if (_last_news_sources['data'] and
         (now - _last_news_sources['timestamp']) < SOURCES_CACHE_DURATION):
         NEWS_SOURCES = _last_news_sources['data']
@@ -1290,7 +1290,7 @@ def get_ryt9_news():
             'error': 'ไม่พบแหล่งข่าวในระบบ'
         }), 500
     
-    # ✅ ใช้แคชข่าวถ้ายังไม่หมดอายุ
+    # ใช้แคชข่าวถ้ายังไม่หมดอายุ
     cache_key = 'all_sources'
     if (_last_news.get(cache_key) and
         (now - _last_news.get(f'{cache_key}_time', 0)) < CACHE_DURATION):
@@ -1306,7 +1306,7 @@ def get_ryt9_news():
     news_id = 1
     
     try:
-        # ✅ ดึงข่าวจากทุกแหล่งใน Database
+        # ดึงข่าวจากทุกแหล่งใน Database
         for source_key, source_info in NEWS_SOURCES.items():
             target_url = source_info['url']
             source_name = source_info['name']
@@ -1470,7 +1470,7 @@ SOURCES_CACHE_DURATION = 3600  # 1 ชั่วโมง
 
 # === Main Entry Point ===
 if __name__ == '__main__':
-    # ✅ สร้างตารางถ้ายังไม่มี
+    # สร้างตารางถ้ายังไม่มี
     init_db()
     
     port = int(os.environ.get('PORT', 8080))
