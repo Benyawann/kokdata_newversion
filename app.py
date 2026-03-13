@@ -161,11 +161,11 @@ def login(): # รับค่า username กับ password จาก form
                 return jsonify({
                     'success': True,
                     'message': 'เข้าสู่ระบบสำเร็จ',
-                    'redirect_url': url_for('index')
+                    'redirect_url': url_for('stations_manage')
                 })
             else:
                 # Redirect สำหรับ form submit ปกติ (รองรับกรณีไม่มี JS)
-                return redirect(url_for('index'))
+                return redirect(url_for('stations_manage'))
         else:
             # กรณี เข้าสู่ระบบไม่สำเร็จ
             if is_ajax:
@@ -184,7 +184,7 @@ def login(): # รับค่า username กับ password จาก form
 @app.route('/logout')
 def logout(): # ออกแล้วจะเด้งกลับไปหน้าหลัก
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for('stations_manage'))
 
 # === CORS Headers ===
 @app.after_request
@@ -208,8 +208,8 @@ def get_stations():
     return stations
 
 # === Index Route ===
-@app.route('/')
-def index():
+@app.route('/stations')
+def stations_manage():
     try:
         stations = get_stations() # ดึงรายการสถานีทั้งหมด
         # แยกข้อมูล จังหวัด, อำเภอ, ตำบล เพื่อใช้ทำ Filter ในหน้าเว็บ
@@ -767,6 +767,45 @@ def check_env():
         "SUPABASE_DATABASE_URL": "SET" if os.environ.get('SUPABASE_DATABASE_URL') else "NOT SET",
         "SECRET_KEY": "SET" if os.environ.get('SECRET_KEY') else "NOT SET"
     }
+
+# ===== ROUTE หน้าหลัก =====
+@app.route('/')
+def index():
+    """หน้าหลัก: แสดงแผนที่และรายงานสถานีตรวจสอบ"""
+    try:
+        stations = get_stations()
+        unique_rivers = sorted(list(set([s['river'] for s in stations if s['river']])))
+        unique_provinces = sorted(list(set([s['province'] for s in stations if s['province']])))
+        unique_tambons = sorted(list(set([s['tambon'] for s in stations if s['tambon']])))
+        unique_amphoes = sorted(list(set([s['amphoe'] for s in stations if s['amphoe']])))
+        
+        location_hierarchy = {}
+        for station in stations:
+            prov = station.get('province', '')
+            amph = station.get('amphoe', '')
+            tamb = station.get('tambon', '')
+            if prov and amph and tamb:
+                if prov not in location_hierarchy:
+                    location_hierarchy[prov] = {}
+                if amph not in location_hierarchy[prov]:
+                    location_hierarchy[prov][amph] = set()
+                location_hierarchy[prov][amph].add(tamb)
+        
+        for prov in location_hierarchy:
+            for amph in location_hierarchy[prov]:
+                location_hierarchy[prov][amph] = sorted(list(location_hierarchy[prov][amph]))
+        
+        # โหลดหน้า mapandnews.html เป็นหน้าหลัก
+        return render_template('mapandnews.html',
+                           stations=stations,
+                           unique_rivers=unique_rivers,
+                           unique_provinces=unique_provinces,
+                           unique_tambons=unique_tambons,
+                           unique_amphoes=unique_amphoes,
+                           location_hierarchy=location_hierarchy)
+    except Exception as e:
+        return f"Error loading page: {str(e)}", 500
+
 # หน้าแสดงแผนที่และข่าว
 @app.route('/map/<station_code>') # ดึงข้อมูลสถานี, น้ำ, ดิน แล้วส่งให้ mapandnews.html
 def map_page(station_code):

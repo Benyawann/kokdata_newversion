@@ -19,26 +19,6 @@ body {
     margin: 0 auto;  
     padding: 0 20px;
 }
-
-/* ===== Back Button ===== */
-.back-button {
-    display: inline-block;
-    margin-bottom: 20px;
-    padding: 10px 20px;
-    background: white;
-    color: black;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.3s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.back-button:hover {
-    background: #99ADA8;
-    color: white;
-    transform: translateX(-5px);
-}
         
 .tab-buttons {
     display: flex;
@@ -1447,6 +1427,17 @@ body {
     border-top: 1px solid #eee;
     color: #888;
     font-size: 0.85em;
+}
+
+.stat-card.total {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.stat-card.total:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+    background: linear-gradient(135deg, #ebf5fb 0%, #d6eaf8 100%);
 }
 
 /* Responsive */

@@ -163,6 +163,25 @@ body {
     box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
 }
 
+.back-button {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background: white;
+    color: black;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.back-button:hover {
+    background: #99ADA8;
+    color: white;
+    transform: translateX(-5px);
+}
+
 .stats {
     display: flex;
     gap: 20px;
@@ -412,24 +431,6 @@ body {
     gap: 10px; 
     margin-bottom: 15px; 
     flex-wrap: wrap;
-}
-
-.map-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    margin: 10px;
-    background: #cd997a;
-    color: white;
-    border-radius: 20px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: background 0.3s;
-}
-
-.map-btn:hover {
-    background: #b58263;
 }
 
 @keyframes fadeIn { 
