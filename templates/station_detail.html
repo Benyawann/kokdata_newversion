@@ -11,7 +11,7 @@
     <div class="container">
     <!-- ย้ายปุ่มย้อนกลับและปุ่มลบมาอยู่ใน header เดียวกัน -->
     <div class="header-actions">
-        <a href="/" class="back-button">ย้อนกลับ</a>
+        <a href="/stations" class="back-button">ย้อนกลับ</a>
         {% if session.logged_in %}
         <div class="station-actions">
              <a href="/edit-station/{{ station.station }}" class="edit-button">
