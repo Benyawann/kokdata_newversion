@@ -102,8 +102,8 @@
 
     <script>
 // เก็บจำนวนคอลัมน์ปัจจุบัน
-let waterCheckColumns = {{ water_check_count }};
-let soilCheckColumns = {{ soil_check_count }};
+let waterCheckColumns = {{ water_check_count }}; // ค่าเริ่มต้นจาก backend Flask จะแทนที่ {{ water_check_count }} ด้วยตัวเลขจริง (เช่น 14) ก่อนส่งให้ Browser
+let soilCheckColumns = {{ soil_check_count }};// ค่าเริ่มต้นจาก backend Flask จะแทนที่ {{ soil_check_count }} ด้วยตัวเลขจริง (เช่น 14) ก่อนส่งให้ Browser
 /// === สร้างแถว ===
 function createRow(type, checkCount, data = null) {
     const row = document.createElement('tr');
@@ -125,12 +125,12 @@ function createRow(type, checkCount, data = null) {
         const cell = document.createElement('td');
         const input = document.createElement('input');
         input.type = 'text';
-        input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;
+        input.name = isSoil ? `soil_check${i}[]` : `check${i}[]`;// name ต้องตรงกับ Backend
         
         // สร้าง key ให้ตรงกับ Python: 'ครั้งที่ 1', 'ครั้งที่ 2', ...
         const checkKey = `ครั้งที่ ${i}`;
         if (data && data.checks && data.checks[checkKey]) {
-            input.value = data.checks[checkKey];
+            input.value = data.checks[checkKey];// เติมค่าเดิมจากฐานข้อมูล
         }
         
         cell.appendChild(input);
@@ -145,7 +145,7 @@ function createRow(type, checkCount, data = null) {
         unitInput.name = 'unit[]';
         unitInput.placeholder = 'mg/L, NTU';
         unitInput.required = true;
-        if (data && data.unit) unitInput.value = data.unit;
+        if (data && data.unit) unitInput.value = data.unit;// เติมหน่วยเดิม
         unitCell.appendChild(unitInput);
         row.appendChild(unitCell);
     }
@@ -159,7 +159,7 @@ function createRow(type, checkCount, data = null) {
     trashIcon.style.width = '20px';
     trashIcon.style.cursor = 'pointer';
     trashIcon.addEventListener('click', () => {
-        row.remove();
+        row.remove();// ลบแถวทันที
     });
     actionCell.appendChild(trashIcon);
     row.appendChild(actionCell);
@@ -193,7 +193,7 @@ function addColumn(type) {
         !isSoil
     );
     
-    // อัปเดตทุกแถวใน tbody
+    // ปเดตทุกแถวที่มีอยู่: เพิ่มช่องกรอกใหม่ให้แต่ละแถว
     const tbody = document.getElementById(isSoil ? 'soilTableBody' : 'waterTableBody');
     const rows = tbody.querySelectorAll('tr');
     rows.forEach(row => {
@@ -205,12 +205,13 @@ function addColumn(type) {
         
         // แทรกก่อนคอลัมน์สุดท้าย (ก่อนถังขยะ และหน่วย)
         const lastCellIndex = isSoil ? -1 : -2;
-        row.insertBefore(cell, row.children[row.children.length + lastCellIndex]);
+        row.insertBefore(cell, row.children[row.children.length + lastCellIndex]); //insertBefore: ใช้แทรกคอลัมน์ใหม่ในตำแหน่งที่ถูกต้อง (ไม่ไปทับปุ่มลบหรือหน่วย)
     });
 }
 
 // ฟังก์ชันแสดง Modal Popup
 function showModal(type, title, message, onConfirm = null) {
+    // ... ตั้งค่า icon, title, message ตาม type (success/error) ...
     const modal = document.getElementById('successModal');
     const modalIcon = document.getElementById('modalIcon');
     const modalTitle = document.getElementById('modalTitle');
@@ -232,11 +233,11 @@ function showModal(type, title, message, onConfirm = null) {
     modalTitle.textContent = title;
     modalMessage.textContent = message;
     
-    modal.classList.add('active');
-    
+    modal.classList.add('active');// แสดง Modal
+    // Event Listeners: ปุ่มตกลง, คลิกพื้นหลัง, กด Esc
     const handleConfirm = () => {
         modal.classList.remove('active');
-        if (onConfirm) onConfirm();
+        if (onConfirm) onConfirm();// รันฟังก์ชันต่อ (เช่น เปลี่ยนหน้า)
         cleanup();
     };
     
@@ -268,8 +269,9 @@ function showModal(type, title, message, onConfirm = null) {
 // ส่งฟอร์ม
 document.getElementById('stationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+    // เตรียม FormData จากฟอร์ม
     const formData = new FormData(document.getElementById('stationForm'));
+    // เพิ่มจำนวนคอลัมน์ปัจจุบัน (สำคัญ! เพราะ Backend ต้องรู้ว่ามีกี่ครั้งที่ตรวจ)
     formData.append('water_check_count', waterCheckColumns);
     formData.append('soil_check_count', soilCheckColumns);
     
@@ -282,25 +284,26 @@ document.getElementById('stationForm').addEventListener('submit', async (e) => {
     }
     
     try {
+         // ส่งข้อมูลไป Backend ด้วย Fetch API
         const response = await fetch(`/edit-station/{{ station.station }}`, {
             method: 'POST',
-            body: formData
+            body: formData // ส่งเป็น FormData (ไม่ใช่ JSON) เพราะมีไฟล์/ฟอร์มธรรมดา
         });
         const result = await response.json();
-        
+        // จัดการผลลัพธ์
         if (result.success) {
             // แสดง Modal แทน alert()
             showModal('success', 'แก้ไขสำเร็จ', 'ข้อมูลสถานี {{ station.station }} ถูกแก้ไขเรียบร้อยแล้ว', () => {
-                window.location.href = `/station/{{ station.station }}`;
+                window.location.href = `/station/{{ station.station }}`;// กลับหน้ารายละเอียด
             });
-        } else {
+        } else { // ผิดพลาด: แสดง Modal แจ้งข้อผิดพลาด
             showModal('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่ทราบสาเหตุ');
         }
     } catch (error) {
         console.error('Error:', error);
         showModal('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     } finally {
-        // คืนค่าปุ่ม
+        // คืนค่าปุ่ม (ไม่ว่าสำเร็จหรือล้มเหลว)
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = originalBtnText;
@@ -311,23 +314,27 @@ document.getElementById('stationForm').addEventListener('submit', async (e) => {
 // === เริ่มต้น ===
 document.addEventListener('DOMContentLoaded', () => {
     // น้ำ
+    // วาดหัวตาราง
     updateTableHeader('waterTable', waterCheckColumns, 'สิ่งที่ตรวจ', true);
+    // เติมแถวจากข้อมูลเดิม (Jinja2 Loop)
     const waterTbody = document.getElementById('waterTableBody');
     {% for param, data in water_data.items() %}
         waterTbody.appendChild(createRow('water', waterCheckColumns, {
             parameter: "{{ param }}",
             unit: "{{ data.unit }}",
-            checks: {{ data.checks|tojson }}
+            checks: {{ data.checks|tojson }} // tojson: แปลง Dict Python เป็น JSON String
         }));
     {% endfor %}
+    // ถ้าไม่มีข้อมูลเดิม ให้เพิ่มแถวว่าง 1 แถว
     if (waterTbody.children.length === 0) {
         waterTbody.appendChild(createRow('water', waterCheckColumns));
     }
+    // ผูกเหตุการณ์ปุ่ม
     document.getElementById('addWaterRowBtn').addEventListener('click', () => {
         waterTbody.appendChild(createRow('water', waterCheckColumns));
     });
     document.getElementById('addWaterColBtn').addEventListener('click', () => {
-        addColumn('water');
+        addColumn('water'); // ใช้ฟังก์ชันเพิ่มคอลัมน์แบบไดนามิก
     });
 
     // ดิน

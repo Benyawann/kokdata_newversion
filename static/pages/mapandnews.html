@@ -211,12 +211,12 @@ const standards = {
     }
 };
 
-// ===== ตัวแปร global =====
-let currentTab = 'water';
-let chartInstance = null;
-let mapInstance = null;
+// ตัวแปรเก็บสถานะ
+let currentTab = 'water'; 
+let chartInstance = null; // ออบเจ็กต์กราฟ Chart.js
+let mapInstance = null; // ออบเจ็กต์แผนที่ Leaflet
 let markers = [];
-let tambonData = null;
+let tambonData = null; // ข้อมูลที่ดึงจาก API
 
 // ===== Register Chart.js plugin =====
 if (window['chartjs-plugin-annotation']) {
@@ -227,14 +227,14 @@ if (window['chartjs-plugin-annotation']) {
 async function fetchTambonData() {
     try {
         console.log('🔄 เรียก API /api/latest-by-tambon...');
-        const response = await fetch('/api/latest-by-tambon');
+        const response = await fetch('/api/latest-by-tambon'); //เรียก API /api/latest-by-tambon เพื่อดึงข้อมูลล่าสุดพร้อมจัดกลุ่มตามตำบล
         const result = await response.json();
         console.log('📥 ผลลัพธ์ API:', result);
         
         if (result.success) {
-            tambonData = result;
-            populateTambonDropdown();
-            populateParamDropdown();
+            tambonData = result; // เก็บข้อมูลไว้ใช้ทั้งหน้า
+            populateTambonDropdown();// เติมตัวเลือกตำบล
+            populateParamDropdown();// เติมตัวเลือกพารามิเตอร์
             populateCheckDropdown();  // เพิ่ม: เติมตัวเลือก รอบตรวจวัด + แสดงจำนวนครั้ง
             console.log('✅ โหลดข้อมูลตำบลสำเร็จ');
             return true;
@@ -286,7 +286,7 @@ function populateCheckDropdown() {
     const soilChecks = tambonData.soil?.check_numbers || [];
     const currentChecks = currentTab === 'water' ? waterChecks : soilChecks;
     
-    // ดึงค่าล่าสุดของประเภทข้อมูลปัจจุบัน
+    // ตัวเลือกแรก: "ครั้งล่าสุด" (แสดงค่าจริงจากฐานข้อมูล)
     const latestCheck = currentTab === 'water' 
         ? tambonData.water_latest_check 
         : tambonData.soil_latest_check;
@@ -295,7 +295,7 @@ function populateCheckDropdown() {
     const latestText = latestCheck ? `${latestCheck} (ล่าสุด)` : 'กำลังโหลด...';
     
     const selectedValue = select.value;
-    select.innerHTML = `<option value="latest">${latestText}</option>`;  // ✅ แสดงค่าจริง
+    select.innerHTML = `<option value="latest">${latestText}</option>`;  // แสดงค่าจริง
     
     if (currentChecks && Array.isArray(currentChecks)) {
         // เรียงจากใหม่ไปเก่า (ไม่รวมค่าล่าสุดที่แสดงอยู่)
@@ -315,11 +315,13 @@ function populateCheckDropdown() {
 
 // ===== Initialize Map =====
 function initMap() {
+    // สร้างแผนที่ที่พิกัดกลาง [20.0, 99.8] ซูมระดับ 9 (พื้นที่เชียงราย)
     mapInstance = L.map('map').setView([20.0, 99.8], 9);
+    // เพิ่ม Tile Layer จาก OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors', maxZoom: 19
     }).addTo(mapInstance);
-    updateMapMarkers();
+    updateMapMarkers();// วาดมาร์คเกอร์สถานี
 }
 
 async function updateMapMarkers() {
@@ -332,13 +334,13 @@ async function updateMapMarkers() {
     markers.forEach(m => mapInstance.removeLayer(m));
     markers = [];
     
-    // ✅ รีเซ็ตข้อมูลสถานี
+    // รีเซ็ตข้อมูลสถานี
     stationLists = {
         exceeds: [],
         normal: [],
         noData: []
     };
-    
+    // ดึงค่าที่ผู้ใช้เลือกจาก Dropdown
     const paramKey = document.getElementById('param-select').value;
     const tambonFilter = document.getElementById('tambon-select').value;
     const selectedCheck = document.getElementById('check-select').value;
@@ -348,7 +350,7 @@ async function updateMapMarkers() {
         document.getElementById('station-summary-box').style.display = 'none';
         return;
     }
-    
+    // ดึงข้อมูล (ถ้าเลือกรอบย้อนหลัง ให้ fetch จาก API เพิ่ม)
     let currentData;
     
     // ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
@@ -444,8 +446,9 @@ async function updateMapMarkers() {
     // สร้างมาร์คเกอร์บนแผนที่ (แสดงเฉพาะตำบลที่เลือก)
     stationsInfo.forEach(st => {
         if (!st.lat || !st.lon) return;
-        if (st.tambon !== tambonFilter) return;
+        if (st.tambon !== tambonFilter) return;// กรองตามตำบลที่เลือก
         
+        // ค้นหาค่าของสถานีนี้ในข้อมูลปัจจุบัน
         let isDanger = false;
         let stationValue = null;
         let checkNumber = selectedCheck === 'latest' ?
@@ -473,16 +476,16 @@ async function updateMapMarkers() {
                 }
             }
         }
-        
+        // กำหนดสีมาร์คเกอร์ตามสถานะ
         const markerClass = stationValue !== null ? (isDanger ? 'danger' : 'safe') : 'no-data';
-        
+         // สร้าง Custom Icon (จุดสี)
         const customIcon = L.divIcon({
             className: 'custom-marker',
             html: `<div class="marker-dot ${markerClass}"></div>`,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
         });
-        
+        // เพิ่มมาร์คเกอร์ลงแผนที่ + ผูก Popup แสดงข้อมูล
         const marker = L.marker([st.lat, st.lon], { icon: customIcon }).addTo(mapInstance);
         
         let rawValue = null;
@@ -586,7 +589,7 @@ function createAnnotations(paramKey, dataType, unit) {
 }
 
 // ===== Update Chart By Tambon (พร้อมคาดการณ์แนวโน้ม) =====
-async function updateChartByTambon() {
+async function updateChartByTambon() { // ดึงข้อมูลตามพารามิเตอร์ที่เลือก
     if (!tambonData) await fetchTambonData();
     
     const tambonKey = document.getElementById('tambon-select').value;
@@ -645,23 +648,23 @@ async function updateChartByTambon() {
         }));
     }
 
-    // สร้างค่ามาตรฐานสำหรับกราฟ
+    // สร้างค่ามาตรฐานสำหรับกราฟ (แดง = เกิน, น้ำเงิน = ปลอดภัย)
     const annotations = createAnnotations(paramKey, currentTab, standardVal, unit);
     
-    // สร้างกราฟ
+    // สร้าง/อัพเดทกราฟ
     const ctx = document.getElementById('mainChart')?.getContext('2d');
     if (!ctx) return;
-    if (chartInstance) chartInstance.destroy();
+    if (chartInstance) chartInstance.destroy(); // ล้างกราฟเก่าก่อนวาดใหม่
     
-    const labels = datasetsToShow.map(ds => ds.label);
+    const labels = datasetsToShow.map(ds => ds.label); 
     
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: labels,// ชื่อสถานีเป็นแกน X
             datasets: [{
                 label: `${paramKey} (${unit})`,
-                data: datasetsToShow.map(ds => ds.data[0]),
+                data: datasetsToShow.map(ds => ds.data[0]),// ค่าเป็นแกน Y
                 backgroundColor: datasetsToShow.map(ds => ds.backgroundColor),
                 borderColor: datasetsToShow.map(ds => ds.borderColor),
                 borderWidth: 2
@@ -671,7 +674,7 @@ async function updateChartByTambon() {
             responsive: true, 
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: { display: false },  // ซ่อน legend เพื่อความสะอาด
                 tooltip: { 
                     callbacks: { 
                         label: function(context) { 
@@ -680,7 +683,7 @@ async function updateChartByTambon() {
                         } 
                     } 
                 },
-                annotation: { annotations }
+                annotation: { annotations } // เพิ่มเส้นมาตรฐาน
             },
             scales: {
                 y: {
@@ -698,7 +701,7 @@ async function updateChartByTambon() {
                         text: 'สถานี',
                         font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' } 
                     },
-                    ticks: { maxRotation: 45, minRotation: 45 }
+                    ticks: { maxRotation: 45, minRotation: 45 } // หมุนชื่อสถานีให้อ่านง่าย
                 }
             }
         }
@@ -918,24 +921,12 @@ function predictTrend(dataPoints, paramName, dataType) {
         icon = '📉';
     }
     
-    // คำนวณความเชื่อมั่น (R² อย่างง่าย)
-    const meanY = sumY / n;
-    const ssTot = validPoints.reduce((sum, p) => sum + Math.pow(p.y - meanY, 2), 0);
-    const ssRes = validPoints.reduce((sum, p) => {
-        const predicted = slope * p.x + intercept;
-        return sum + Math.pow(p.y - predicted, 2);
-    }, 0);
-    
-    const rSquared = ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
-    const confidence = Math.max(0, Math.min(100, Math.round(rSquared * 100)));
-    
     return {
         trend,
         trendText,
         predictedValue: predictedValue.toFixed(3),
         lastValue: lastValue.toFixed(3),
         changePercent: changePercent.toFixed(1),
-        confidence,
         icon,
         message: `คาดการณ์ว่าค่า ${paramName} ในรอบถัดไปจะ${trendText}ประมาณ ${Math.abs(changePercent).toFixed(1)}%`
     };
@@ -1224,7 +1215,7 @@ function showNewsErrorState() {
     `;
 }
 
-// ===== Render News Cards =====
+// แสดงการ์ดข่าว + Pagination
 function renderNews() {
     if (newsIsLoading) { showNewsLoadingState(); return; }
     if (newsLoadError && newsData.length === 0) { showNewsErrorState(); return; }
@@ -1264,6 +1255,7 @@ function renderNews() {
     
     // Pagination
     const totalPages = Math.ceil(filteredNews.length / NEWS_ITEMS_PER_PAGE);
+    // ตัดแบ่งข่าวตามหน้าปัจจุบัน
     const startIndex = (newsCurrentPage - 1) * NEWS_ITEMS_PER_PAGE;
     const pageItems = filteredNews.slice(startIndex, startIndex + NEWS_ITEMS_PER_PAGE);
     
@@ -1293,7 +1285,7 @@ function renderNews() {
         </div>
     `).join('');
     
-    // Render Pagination
+    // สร้างปุ่ม Pagination
     renderNewsPagination(totalPages);
 }
 

@@ -109,15 +109,16 @@
     </div>
 
     <script>
-    const WATER_CHECK_COUNT = 15;
-    const SOIL_CHECK_COUNT = 9;
+    const WATER_CHECK_COUNT = 15;  // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจน้ำ
+    const SOIL_CHECK_COUNT = 9; // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจตะกอนดิน
 
+    // ฟังก์ชันสร้างแถว
     function createRow(type, checkCount, isFirstRow = false) {
         const row = document.createElement('tr');
         const isSoil = (type === 'soil');
 
-        const paramCell = document.createElement('td');
-        const paramInput = document.createElement('input');
+        const paramCell = document.createElement('td'); //สร้างช่องสำหรับคอลัมน์
+        const paramInput = document.createElement('input'); //สร้างช่องสำหรับพารามิเตอร์
         paramInput.type = 'text';
         paramInput.className = 'param-input';
         paramInput.placeholder = isSoil ? 'เช่น ตะกั่ว' : 'เช่น ความขุ่น';
@@ -125,6 +126,7 @@
         paramCell.appendChild(paramInput);
         row.appendChild(paramCell);
 
+        // วนลูปสร้างช่องกรอกค่าตามจำนวนรอบตรวจ
         for (let i = 1; i <= checkCount; i++) {
             const cell = document.createElement('td');
             const input = document.createElement('input');
@@ -134,6 +136,7 @@
             row.appendChild(cell);
         }
 
+        //วนลูปสร้างช่องกรอกค่าตามจำนวนรอบตรวจ
         if (!isSoil) {
             const unitCell = document.createElement('td');
             const unitInput = document.createElement('input');
@@ -169,6 +172,7 @@
         return row;
     }
 
+    //ฟังก์ชันสร้างหัวตารางตามจำนวนรอบตรวจวัดที่กำหนด
     function renderTableHeader(tableId, checkCount, firstColumnText, hasUnit = true) {
         const thead = document.querySelector(`#${tableId} thead tr`);
         thead.innerHTML = `<th>${firstColumnText}</th>`;
@@ -181,6 +185,7 @@
         thead.innerHTML += '<th></th>';
     }
 
+    //ฟังก์ชันล้างข้อมูลในตาราง
     function resetTables() {
         const waterTbody = document.getElementById('waterTableBody');
         waterTbody.innerHTML = '';
@@ -202,12 +207,14 @@
         const confirmBtn = modal.querySelector('[id$="ConfirmBtn"], [id$="CloseBtn"]');
         const cancelBtn = modal.querySelector('[id$="CancelBtn"]');
         
+        //กดปุ่มยืนยัน/ยกเลิก
         const handleConfirm = () => {
             modal.classList.remove('active');
             if (onConfirm) onConfirm();
             cleanup();
         };
         
+        //กดปุ่มยกเลิก
         const handleCancel = () => {
             modal.classList.remove('active');
             cleanup();
@@ -220,6 +227,7 @@
             }
         };
         
+        //onConfirm: รับฟังก์ชันที่จะทำงาน หลังจาก กดปุ่มยืนยัน (เช่น ล้างฟอร์ม)
         const cleanup = () => {
             confirmBtn?.removeEventListener('click', handleConfirm);
             cancelBtn?.removeEventListener('click', handleCancel);
@@ -227,6 +235,7 @@
             document.removeEventListener('keydown', handleEsc);
         };
         
+        //กดปุ่ม esc
         const handleEsc = (e) => {
             if (e.key === 'Escape') {
                 modal.classList.remove('active');
@@ -245,11 +254,12 @@
     // ตรวจสอบว่ามีข้อมูลในฟอร์มหรือไม่
     function hasFormData() {
         const stationFields = ['station', 'river', 'tambon', 'amphoe', 'province', 'location'];
+        // ตรวจสอบข้อมูลในฟิลด์ station
         for (let field of stationFields) {
             const el = document.getElementById(field);
             if (el && el.value.trim() !== '') return true;
         }
-        
+        // ตรวจสอบข้อมูลในตาราง water
         const waterRows = document.querySelectorAll('#waterTableBody tr');
         for (let row of waterRows) {
             const param = row.querySelector('.param-input')?.value.trim();
@@ -260,7 +270,7 @@
                 if (checkVal) return true;
             }
         }
-        
+        // ตรวจสอบข้อมูลในตาราง soil
         const soilRows = document.querySelectorAll('#soilTableBody tr');
         for (let row of soilRows) {
             const param = row.querySelector('.param-input')?.value.trim();
@@ -273,7 +283,7 @@
         
         return false;
     }
-
+    // เมื่อหน้าเว็บถูกโหลดเสร็จ จะแสดงตารางและปุ่ม ในหน้าดพิ่มสถานี
     document.addEventListener('DOMContentLoaded', () => {
         const waterTbody = document.getElementById('waterTableBody');
         const soilTbody = document.getElementById('soilTableBody');
@@ -298,9 +308,10 @@
             e.preventDefault();
             
             const originalText = submitBtn.textContent;
+            //เตรียมสถานะปุ่ม (Loading)
             submitBtn.disabled = true;
             submitBtn.textContent = 'กำลังบันทึก...';
-
+            // รวบรวมข้อมูลพื้นฐาน
             const basicData = {
                 station: document.getElementById('station').value,
                 river: document.getElementById('river').value,
@@ -310,9 +321,11 @@
                 location: document.getElementById('location').value,
             };
 
+            // รวบรวมข้อมูลน้ำ (วนลูปอ่านค่าจากตาราง)
             const waterData = [];
             for (let row of waterTbody.rows) {
                 const param = row.querySelector('.param-input').value;
+                // ดึงค่า param, unit, check1-check15 ...
                 if(param) {
                     const item = {
                         parameter: param,
@@ -325,6 +338,7 @@
                 }
             }
 
+            // รวบรวมข้อมูลดิน
             const soilData = [];
             for (let row of soilTbody.rows) {
                 const param = row.querySelector('.param-input').value;
@@ -336,7 +350,7 @@
                     soilData.push(item);
                 }
             }
-
+            // ส่งข้อมูลไป Backend ด้วย Fetch API
             try {
                 const response = await fetch('/api/stations', { 
                     method: 'POST',
@@ -348,13 +362,13 @@
                     })
                 });
                 const result = await response.json();
-                
+                // จัดการผลลัพธ์
                 if (result.success) {
                     // แสดง Modal Success แทน alert()
                     showModal('successModal', () => {
                         // หลังจากกดตกลง → ล้างฟอร์ม
                         document.getElementById('stationForm').reset();
-                        resetTables();
+                        resetTables();  // รีเซ็ตตารางกลับเป็น 1 แถวว่าง
                     });
                 } else {
                     alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
@@ -363,6 +377,7 @@
                 console.error('Error:', error);
                 alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
             } finally {
+                // คืนสถานะปุ่ม
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
@@ -370,11 +385,13 @@
 
         // จัดการปุ่มล้างข้อมูล - แสดง Modal Confirm
         resetBtn.addEventListener('click', function() {
+            // ถ้ามีข้อมูล -> แสดง Modal ยืนยันก่อน
             if (hasFormData()) {
                 showModal('resetModal', () => {
                     document.getElementById('stationForm').reset();
                     resetTables();
                 });
+                // ถ้าว่างอยู่แล้ว -> ล้างเลย
             } else {
                 document.getElementById('stationForm').reset();
                 resetTables();

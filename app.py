@@ -3,34 +3,34 @@
 """
 Flask web application with PostgreSQL (Neon)
 """
-
+# Flask เป็น framework หลักสำหรับสร้างเว็บ
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
-import psycopg2
+import psycopg2 # ใช้เชื่อมต่อ Database ของ PostgreSQL
 from psycopg2.extras import RealDictCursor
-import os
-import secrets
-from dotenv import load_dotenv 
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
+import os #ใช้จัดการ Environment Variables เช่น รหัสผ่าน ,URL Database
+import secrets #ใช้สร้าง Secret Key ของ Flask
+from dotenv import load_dotenv #ใช้จัดการ Environment Variables เช่น รหัสผ่าน ,URL Database
+import requests # ใช้ดึงข้อมูลข่าวจากเว็บภายนอก
+from bs4 import BeautifulSoup # ใช้ดึงข้อมูลข่าวจากเว็บภายนอก
+from datetime import datetime 
 from functools import lru_cache
 import time
 
 _last_ryt9 = {'data': None, 'timestamp': 0}
 CACHE_DURATION = 1800  # 30 นาที
 
-load_dotenv()  # ← โหลดทันทีหลัง import
+load_dotenv()  # โหลดทันทีหลัง import
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16) #ใช้สำหรับจัดการ Session (การเข้าสู่ระบบ)
 app.config['JSON_AS_ASCII'] = False
 
 # === Register API Blueprint ===
 from api.index import api_bp
-app.register_blueprint(api_bp)
+app.register_blueprint(api_bp) #ลงทะเบียน API Blueprint 
 
-# === Database Connection ===
-def get_db():
+#  ฟังก์ชันสำหรับสร้างการเชื่อมต่อไปยังฐานข้อมูล โดยใช้ URL จาก SUPABASE_DATABASE_URL
+def get_db(): 
     db_url = os.environ.get('SUPABASE_DATABASE_URL')
     if not db_url:
         raise ValueError("SUPABASE_DATABASE_URL not set in environment")
@@ -38,6 +38,7 @@ def get_db():
     conn.cursor_factory = RealDictCursor
     return conn
 
+#ฟังก์ชันสำหรับสร้างตารางฐานข้อมูลอัตโนมัติหากยังไม่มีข้อมูลใน Database
 def init_db():
     conn = None
     try:
@@ -120,7 +121,7 @@ def debug_db():
         info['Error'] = str(e)
     return info
 
-# === Login Required Decorator ===
+# ฟังก์ชันที่ใช้เช็คก่อนเข้าถึงส่วนที่แอดมินมีสิทธิ์ ถ้ายังไม่ได้ Login จะถูกเด้งไปหน้า Login
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -132,7 +133,7 @@ def login_required(f):
 
 # === Login Route ===
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def login(): # รับค่า username กับ password จาก form
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
@@ -166,7 +167,7 @@ def login():
                 # Redirect สำหรับ form submit ปกติ (รองรับกรณีไม่มี JS)
                 return redirect(url_for('index'))
         else:
-            # ❌ เข้าสู่ระบบไม่สำเร็จ
+            # กรณี เข้าสู่ระบบไม่สำเร็จ
             if is_ajax:
                 return jsonify({
                     'success': False,
@@ -181,7 +182,7 @@ def login():
 
 # === Logout Route ===
 @app.route('/logout')
-def logout():
+def logout(): # ออกแล้วจะเด้งกลับไปหน้าหลัก
     session.clear()
     return redirect(url_for('index'))
 
@@ -210,7 +211,8 @@ def get_stations():
 @app.route('/')
 def index():
     try:
-        stations = get_stations()
+        stations = get_stations() # ดึงรายการสถานีทั้งหมด
+        # แยกข้อมูล จังหวัด, อำเภอ, ตำบล เพื่อใช้ทำ Filter ในหน้าเว็บ
         unique_rivers = sorted(list(set([s['river'] for s in stations if s['river']])))
         unique_provinces = sorted(list(set([s['province'] for s in stations if s['province']])))
         unique_tambons = sorted(list(set([s['tambon'] for s in stations if s['tambon']])))
@@ -410,6 +412,8 @@ def get_soil_data(station_code):
     }
 
 # === Add Station Route ===
+#GET: แสดงฟอร์ม
+#POST: รับค่าจากฟอร์ม (ข้อมูลสถานี, ค่าตรวจน้ำ, ค่าตรวจดิน) แล้วบันทึกลงฐานข้อมูล
 @app.route('/add-station', methods=['GET', 'POST'])
 @login_required
 def add_station():
@@ -553,6 +557,7 @@ def add_station():
     return render_template('add_station.html')
 
 # === Delete Station Route ===
+# ลบจาก station_data
 @app.route('/delete-station/<station_code>', methods=['DELETE'])
 @login_required
 def delete_station(station_code):
@@ -572,6 +577,7 @@ def delete_station(station_code):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # === Station Detail Route ===
+#น้าแสดงรายละเอียดสถานี ดึงข้อมูลสถานี, ข้อมูลน้ำ, ข้อมูลดิน ของสถานีนั้นๆ
 @app.route('/station/<station_code>')
 def station_detail(station_code):
     try:
@@ -597,6 +603,8 @@ def station_detail(station_code):
         return f"Error loading station: {str(e)}", 500
 
 # === Edit Station Route ===
+#GET: ดึงข้อมูลเดิมมาแสดงในฟอร์ม
+#POST: อัปเดตข้อมูลสถานี และ ลบข้อมูลน้ำ/ดินเก่าทิ้งแล้วใส่ใหม่ 
 @app.route('/edit-station/<station_code>', methods=['GET', 'POST'])
 @login_required
 def edit_station(station_code):
@@ -746,21 +754,21 @@ def edit_station(station_code):
         traceback.print_exc()
         return f"Error loading edit form: {str(e)}", 500
     
-@app.route('/env-test')
+@app.route('/env-test') # Route สำหรับตรวจสอบสถานะฐานข้อมูลและ Environment Variables (ใช้ตอนพัฒนา)
 def env_test():
     return {
         'POSTGRES_HOST': os.environ.get('POSTGRES_HOST'),
         'DATABASE_URL': os.environ.get('DATABASE_URL')[:50] + '...' if os.environ.get('DATABASE_URL') else None
     }
 
-@app.route('/check-env')
+@app.route('/check-env') # Route สำหรับตรวจสอบสถานะฐานข้อมูลและ Environment Variables (ใช้ตอนพัฒนา)
 def check_env():
     return {
         "SUPABASE_DATABASE_URL": "SET" if os.environ.get('SUPABASE_DATABASE_URL') else "NOT SET",
         "SECRET_KEY": "SET" if os.environ.get('SECRET_KEY') else "NOT SET"
     }
-
-@app.route('/map/<station_code>')
+# หน้าแสดงแผนที่และข่าว
+@app.route('/map/<station_code>') # ดึงข้อมูลสถานี, น้ำ, ดิน แล้วส่งให้ mapandnews.html
 def map_page(station_code):
     # 1. ดึงข้อมูลสถานี
     station = get_station_by_code(station_code)
@@ -785,7 +793,7 @@ def map_page(station_code):
     )
 
 # === API: Get All Monitoring Data for Map ===
-@app.route('/api/map-data')
+@app.route('/api/map-data') # ดึงข้อมูลน้ำและดินทั้งหมดจัดรูปแบบสำหรับแสดงแผนที่ดึงข้อมูลน้ำและดินทั้งหมดจัดรูปแบบสำหรับแสดงแผนที่
 def api_map_data():
     """ส่งข้อมูลน้ำและดินทั้งหมดในรูปแบบ JSON สำหรับแผนที่"""
     try:
@@ -881,7 +889,7 @@ def api_map_data():
         return jsonify({'success': False, 'error': str(e)}), 500
     
 # === API: Get Latest Data for Map Chart ===
-@app.route('/api/map-latest-data')
+@app.route('/api/map-latest-data') # ดึงค่าล่าสุดของแต่ละสถานี
 def api_map_latest_data():
     """ส่งข้อมูลค่าล่าสุดของแต่ละสถานี สำหรับแสดงกราฟ"""
     try:
@@ -963,7 +971,7 @@ def api_map_latest_data():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
     
-@app.route('/api/latest-by-tambon')
+@app.route('/api/latest-by-tambon') # ดึงข้อมูลล่าสุดจัดกลุ่มตาม "ตำบล" พร้อมรายการรอบตรวจวัดทั้งหมด
 def api_latest_by_tambon():
     """ดึงข้อมูลล่าสุดจัดกลุ่มตามตำบล + รายการรอบตรวจวัดทั้งหมด"""
     try:
@@ -1136,7 +1144,7 @@ def api_latest_by_tambon():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/data-by-check')
+@app.route('/api/data-by-check') # ดึงข้อมูลตาม "รอบตรวจวัด" ที่เลือก (เช่น ครั้งที่ 1, ครั้งที่ 2)
 def api_data_by_check():
     """ดึงข้อมูลตามรอบตรวจวัดที่ระบุ"""
     try:
@@ -1268,7 +1276,7 @@ def api_data_by_check():
 _last_news = {}  # ใช้ dict แทน เพื่อแคชแยกตามแหล่ง
 CACHE_DURATION = 1800  # 30 นาที
 
-@app.route('/api/ryt9-news', methods=['GET'])
+@app.route('/api/ryt9-news', methods=['GET']) # ระบบดึงข่าวอัตโนมัติ
 def get_ryt9_news():
     """ดึงข่าวจากทุกแหล่งในฐานข้อมูล"""
     now = time.time()
@@ -1278,7 +1286,7 @@ def get_ryt9_news():
         (now - _last_news_sources['timestamp']) < SOURCES_CACHE_DURATION):
         NEWS_SOURCES = _last_news_sources['data']
         print("✅ Using cached news sources")
-    else:
+    else: #  ดึงรายการแหล่งข่าวจากฐานข้อมูล 
         NEWS_SOURCES = get_news_sources()
         _last_news_sources['data'] = NEWS_SOURCES
         _last_news_sources['timestamp'] = time.time()

@@ -3,23 +3,30 @@
 """
 API endpoints for Kok Data Application
 """
+# api/index.py ทำหน้าที่เป็น API Layer แยกออกมาจากไฟล์หลัก app.py โดยใช้หลักการ Flask Blueprint เพื่อจัดกลุ่มเส้นทาง (Routes) ที่เป็น API โดยเฉพาะ 
 
+#Blueprint: ใช้สร้างกลุ่มของ Route แยกออกมา ในที่นี้ชื่อว่า 'api'
+# jsonify: ฟังก์ชันสำหรับแปลงข้อมูล Python (Dict/List) ให้เป็นรูปแบบ JSON เพื่อส่งกลับให้ Frontend
+# request: ใช้สำหรับรับข้อมูลจากผู้ใช้ (เช่น JSON Body, Query Parameters)
+#RealDictCursor: ทำให้ผลลัพธ์จากฐานข้อมูลเข้าถึงคอลัมน์ด้วยชื่อได้ (เช่น row['station']) แทนการใช้ดัชนี (เช่น row[0])
 from flask import Blueprint, jsonify, request
 from psycopg2.extras import RealDictCursor
 import re
 
 # สร้าง Blueprint สำหรับ API
+# url_prefix='/api' กำหนดว่าทุก Route ในไฟล์นี้จะต้องขึ้นต้นด้วย /api โดยอัตโนมัติ (เช่น /stations จะกลายเป็น /api/stations)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-
+# ฟังก์ชันช่วยแปลงค่าตัวเลข 
 def safe_float(value):
     """แปลง string เป็น float อย่างปลอดภัย"""
     if value is None:
         return None
     val_str = str(value).strip()
-    val_str = val_str.replace(',', '').replace(' ', '')
-    if not val_str or val_str[0] in '<>' or not val_str.replace('.', '', 1).isdigit():
-        return None
+    val_str = val_str.replace(',', '').replace(' ', '') # ตัดช่องว่างและเครื่องหมายลูกน้ำออก
+    if not val_str or val_str[0] in '<>' or not val_str.replace('.', '', 1).isdigit(): # ตรวจสอบกรณีพิเศษ เช่น ค่าที่ขึ้นต้นด้วย < หรือ > (เช่น <5.0) ซึ่งมักพบในข้อมูลคุณภาพน้ำ
+        return None #ถ้าแปลงไม่ได้จะคืนค่า None แทนที่จะทำให้โปรแกรม Error
+
     try:
         return float(val_str)
     except (ValueError, TypeError):
@@ -30,10 +37,11 @@ def safe_float(value):
 @api_bp.route('/stations', methods=['GET'])
 def get_stations():
     try:
-        from app import get_db  # import ฟังก์ชันจาก app.py
+        from app import get_db  # import ฟังก์ชันจาก app.py เพื่อเชื่อมต่อ Database
         conn = get_db()
         cur = conn.cursor()
         
+        # ดึงข้อมูลจากตาราง station_data เรียงลำดับตามชื่อแม่น้ำและชื่อสถานี
         cur.execute("""
             SELECT id, station, river, tambon, amphoe, province, location
             FROM station_data
@@ -55,7 +63,7 @@ def get_stations():
 def add_station_api():
     try:
         from app import get_db
-        data = request.get_json()
+        data = request.get_json() # รับข้อมูล: request.get_json() ดึงข้อมูล JSON ที่ส่งมา
         
         if not data:
             return jsonify({'success': False, 'error': 'No JSON data received'}), 400
@@ -167,7 +175,7 @@ def add_station_api():
 
 # === GET /api/stations/<station_code> - ดึงข้อมูลสถานีเดียว ===
 @api_bp.route('/stations/<station_code>', methods=['GET'])
-def get_station_detail(station_code):
+def get_station_detail(station_code): 
     try:
         from app import get_db
         conn = get_db()
@@ -235,6 +243,7 @@ def get_station_detail(station_code):
                 'numeric_value': row['numeric_value']
             }
         
+        # ส่งข้อมูลไปแสดงผลที่ frontend หน้า station detail
         return jsonify({
             'success': True,
             'data': {
@@ -250,7 +259,7 @@ def get_station_detail(station_code):
 
 # === PUT /api/stations/<station_code> - อัปเดตสถานี ===
 @api_bp.route('/stations/<station_code>', methods=['PUT'])
-def update_station_api(station_code):
+def update_station_api(station_code): # แก้ไขข้อมูลพื้นฐานของสถานี (ชื่อ, ที่อยู่, พิกัด)
     try:
         from app import get_db
         data = request.get_json() or request.form.to_dict()
@@ -293,7 +302,7 @@ def update_station_api(station_code):
 
 # === DELETE /api/stations/<station_code> - ลบสถานี ===
 @api_bp.route('/stations/<station_code>', methods=['DELETE'])
-def delete_station_api(station_code):
+def delete_station_api(station_code):# ลบสถานีออกจากระบบ
     try:
         from app import get_db
         conn = get_db()
@@ -305,6 +314,7 @@ def delete_station_api(station_code):
             WHERE station = %s
         """, (station_code.strip(),))
         
+        # ถ้าไม่พบสถานี  จะส่ง Error 404 กลับ
         if cur.rowcount == 0:
             conn.close()
             return jsonify({'success': False, 'error': 'Station not found'}), 404

@@ -158,11 +158,11 @@
             const confirmBtn = document.getElementById('modalConfirmBtn');
             const cancelBtn = document.getElementById('modalCancelBtn');
             
-            modal.classList.add('active');
-            
+            modal.classList.add('active'); // แสดง Modal
+            // Event Listeners: ปุ่มยืนยัน, ยกเลิก, คลิกพื้นหลัง, กด Esc
             const handleConfirm = () => {
                 modal.classList.remove('active');
-                if (onConfirm) onConfirm();
+                if (onConfirm) onConfirm(); // รันฟังก์ชันต่อ (เช่น เปลี่ยนหน้า)
                 cleanup();
             };
             
@@ -246,8 +246,9 @@
             const selectedProvince = filterProvince.value;
             const currentValue = filterAmphoe.value;
             
-        // Clear amphoe dropdown
-        filterAmphoe.innerHTML = '<option value="">ทั้งหมด (อำเภอ)</option>';       
+        // ล้างตัวเลือกอำเภอเดิม
+        filterAmphoe.innerHTML = '<option value="">ทั้งหมด (อำเภอ)</option>'; 
+        // ถ้าเลือกจังหวัด → แสดงเฉพาะอำเภอในจังหวัดนั้น      
             if (selectedProvince && locationHierarchy[selectedProvince]) {
                 const amphoes = Object.keys(locationHierarchy[selectedProvince]).sort();
                 amphoes.forEach(amphoe => {
@@ -257,7 +258,7 @@
                         filterAmphoe.appendChild(option);
                 });
             } else if (selectedProvince) {
-            // If no province selected, show all amphoes
+            //ถ้าไม่เลือกจังหวัด → แสดงอำเภอทั้งหมด
             allAmphoes.forEach(amphoe => {
                 const option = document.createElement('option');
                     option.value = amphoe;
@@ -266,24 +267,24 @@
             });
         }
             
-        // Reset amphoe selection if current value is not in new list
+        // รีเซ็ตค่าที่เลือกถ้าไม่อยู่ในลิสต์ใหม่
         if (currentValue && !Array.from(filterAmphoe.options).some(opt => opt.value === currentValue)) {
             filterAmphoe.value = '';
         }
             
-        // Trigger tambon update
+        // อัปเดต Dropdown ตำบลต่อ
         updateTambonDropdown();
         }
         
-        // Update Tambon dropdown based on selected Amphoe
+        // ฟังก์ชันอัปเดต Dropdown ตำบล
         function updateTambonDropdown() {
             const selectedProvince = filterProvince.value;
             const selectedAmphoe = filterAmphoe.value;
             const currentValue = filterTambon.value;
             
-        // Clear tambon dropdown
+        // ล้างตัวเลือกตำบลเดิม
         filterTambon.innerHTML = '<option value="">ทั้งหมด (ตำบล)</option>';
-            
+            // ถ้าเลือกจังหวัด+อำเภอ → แสดงเฉพาะตำบลในอำเภอนั้น
             if (selectedProvince && selectedAmphoe && 
                 locationHierarchy[selectedProvince] && 
                 locationHierarchy[selectedProvince][selectedAmphoe]) {
@@ -296,7 +297,7 @@
                         filterTambon.appendChild(option);
                 });
             } else if (selectedProvince && locationHierarchy[selectedProvince]) {
-            // If only province selected, show all tambons in that province
+            // ถ้าเลือกแค่จังหวัด → แสดงตำบลทั้งหมดในจังหวัดนั้น
             const allTambonsInProvince = new Set();
             Object.values(locationHierarchy[selectedProvince]).forEach(tambons => {
                 tambons.forEach(t => allTambonsInProvince.add(t));
@@ -308,7 +309,7 @@
                     filterTambon.appendChild(option);
             });
         } else {
-        // If no filters, show all tambons
+        // ถ้าไม่เลือกอะไร → แสดงตำบลทั้งหมด
         allTambons.forEach(tambon => {
             const option = document.createElement('option');
                 option.value = tambon;
@@ -322,7 +323,7 @@
             filterTambon.value = '';
         }
     }
-
+    //ฟังก์ชันกรองสถานีหลัก 
     function filterStations() {
         const searchTerm = searchInput.value.toLowerCase().trim();
         const selectedRiver = filterRiver.value;
@@ -333,6 +334,7 @@
         let visibleCount = 0;
 
         stationCards.forEach(card => {
+            // อ่านค่าจาก data-attributes
             const river = card.dataset.river;
             const province = card.dataset.province;
             const amphoe = card.dataset.amphoe;
@@ -340,6 +342,7 @@
             const station = card.dataset.station.toLowerCase();
             const location = card.dataset.location.toLowerCase();
 
+            // ตรวจสอบเงื่อนไขการค้นหา (AND Logic)
             const matchesSearch = !searchTerm || 
                 station.includes(searchTerm) || 
                 river.toLowerCase().includes(searchTerm) ||
@@ -350,6 +353,7 @@
             const matchesAmphoe = !selectedAmphoe || amphoe === selectedAmphoe;
             const matchesTambon = !selectedTambon || tambon === selectedTambon;
 
+            // แสดง/ซ่อน การ์ดตามผลลัพธ์
             if (matchesSearch && matchesRiver && matchesProvince && matchesAmphoe && matchesTambon) {
                 card.style.display = 'block';
                 visibleCount++;
@@ -357,9 +361,10 @@
                 card.style.display = 'none';
             }
         });
-
+        // อัปเดตตัวเลข "แสดงผล"
         filteredCount.textContent = visibleCount;
 
+        // แสดงข้อความ "ไม่พบผลลัพธ์" ถ้าจำเป็น
         if (visibleCount === 0) {
             noResults.style.display = 'block';
             stationsGrid.style.display = 'none';
@@ -369,20 +374,21 @@
         }
     }
 
-    // Event listeners
+    // เมื่อพิมพ์ค้นหา → กรองทันที
     searchInput.addEventListener('input', filterStations);
+    // เมื่อเปลี่ยนตัวกรอง → กรองทันที
     filterRiver.addEventListener('change', filterStations);
         
     filterProvince.addEventListener('change', function() {
-        updateAmphoeDropdown();
+        updateAmphoeDropdown();// อัปเดตอำเภอด้วย
         filterStations();
     });
     filterAmphoe.addEventListener('change', function() {
-        updateTambonDropdown();
+        updateTambonDropdown();// อัปเดตตำบลด้วย
         filterStations();
     });
     filterTambon.addEventListener('change', filterStations);
-    // Initialize dropdowns on page load
+    // เริ่มต้น: อัปเดต Dropdown ครั้งแรกเมื่อโหลดหน้า
     updateAmphoeDropdown();
     </script>
 </body>

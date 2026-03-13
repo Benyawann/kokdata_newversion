@@ -358,10 +358,10 @@ function showDeleteModal(stationCode, onConfirm) {
     
     // แสดง Modal
     modal.classList.add('active');
-    
+    // Event Listeners: ปุ่มยืนยัน, ยกเลิก, คลิกพื้นหลัง, กด Esc
     const handleConfirm = () => {
         modal.classList.remove('active');
-        if (onConfirm) onConfirm();
+        if (onConfirm) onConfirm();// รันฟังก์ชันต่อ (เช่น เรียก API ลบ)
         cleanup();
     };
     
@@ -489,14 +489,16 @@ function showDeleteSuccessModal(stationCode, onConfirm) {
 
 // แก้ไขฟังก์ชัน deleteStation ให้ใช้ Modal ทั้ง Confirm และ Success
 function deleteStation(stationCode) {
+    // แสดง Modal ยืนยันก่อน
     showDeleteModal(stationCode, () => {
+        // ถ้าผู้ใช้กด "ลบสถานี" ใน Modal → เรียก API ลบ
         fetch(`/delete-station/${stationCode}`, {
             method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // แสดง Modal Success แทน alert()
+                // ถ้าลบสำเร็จ → แสดง Modal แจ้งผล → กลับหน้าหลัก
                 showDeleteSuccessModal(stationCode, () => {
                     window.location.href = '/'; // กลับไปหน้าหลัก
                 });
@@ -520,18 +522,16 @@ function deleteStation(stationCode) {
         
         let waterChart = null;
         let soilChart = null;
-
+        // การเตรียมข้อมูลสำหรับกราฟ 
         function filterDataForChart(numeric_values, check_numbers) {
-            // Use numeric_values column from backend (ND, -, < are already set to 0)
+            // ใช้ค่าตัวเลขที่ Backend คำนวณให้แล้ว (0 สำหรับ ND, -, <)
             const filteredData = [];
             const filteredLabels = [];
             
             for (const checkNum of check_numbers) {
                 const checkStr = checkNum.toString();
                 const numValue = numeric_values[checkStr];
-                
-            // Use numeric value directly (0 for ND, -, <)
-                // Ensure it's a number, not string
+            
                 if (numValue !== undefined && numValue !== null) {
                     const num = typeof numValue === 'number' ? numValue : parseFloat(numValue);
                         if (!isNaN(num)) {
@@ -544,7 +544,7 @@ function deleteStation(stationCode) {
             }
 
             function createWaterChart(parameter) {
-                // Use filtered dataframe for chart
+                // 1. หาแถวข้อมูลที่ตรงกับพารามิเตอร์ที่เลือก
                 const row = waterData.pivot_list_filtered.find(r => r.parameter === parameter);
                 if (!row) {
                     alert('ไม่พบข้อมูลที่กรองแล้วสำหรับ ' + parameter);
@@ -561,7 +561,7 @@ function deleteStation(stationCode) {
                 console.log('Row:', row);
                 console.log('numeric_values:', row.numeric_values);
                 console.log('Sample values:', Object.values(row.numeric_values).slice(0, 5));
-
+                // 2. เตรียมข้อมูลสำหรับกราฟ
                 const chartData = filterDataForChart(row.numeric_values, waterData.check_numbers);
             
                 console.log('Chart data:', chartData);
@@ -570,7 +570,7 @@ function deleteStation(stationCode) {
                     alert('ไม่มีข้อมูลที่สามารถแสดงกราฟได้');
                     return;
                 }
-
+                // 3. สร้างกราฟ
                 const ctx = document.getElementById('waterChart').getContext('2d');
             
                 if (waterChart) {
@@ -578,9 +578,10 @@ function deleteStation(stationCode) {
                 }
 
                 waterChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: chartData.labels,
+                    type: 'line',  // กราฟเส้น
+                    // แกน X: ครั้งที่ 1, ครั้งที่ 2, ...
+                    data: { 
+                        labels: chartData.labels, 
                         datasets: [{
                             label: `${parameter} (${row.unit})`,
                             data: chartData.data,
@@ -1034,21 +1035,22 @@ function deleteStation(stationCode) {
     }); 
 }
 
-    // Tab switching logic
+    // ฟังก์ชันสลับแท็บ
     function setupTabSwitching() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
+                const targetId = btn.dataset.target; //'water-table' หรือ 'water-chart'
                 const section = btn.closest('.data-section');
 
-                // Remove active from all buttons & contents in this section
+                // ลบคลาส active จากทุกปุ่มและเนื้อหาในเซกชันนี้
                 section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 section.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-                // Activate clicked tab
+                // เพิ่มคลาส active ให้ปุ่มที่คลิกและเนื้อหาเป้าหมาย
                 btn.classList.add('active');
                 document.getElementById(targetId).classList.add('active');
 
+                // ถ้าเป็นแท็บกราฟ → ซ่อน container จนกว่าจะเลือกพารามิเตอร์
                 if (targetId.includes('chart')) {
                 // ซ่อน container และ toggle button จนกว่าจะเลือกพารามิเตอร์
                     const container = document.getElementById(targetId.replace('-chart', '-chart-container'));
@@ -1060,9 +1062,9 @@ function deleteStation(stationCode) {
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {  // ผูกอีเวนต์สลับแท็บ
         setupTabSwitching();
-    
+    // รอให้ Chart.js โหลดเสร็จก่อนสร้างกราฟ
     if (typeof Chart !== 'undefined') {
         initCharts();
     } else {
@@ -1082,12 +1084,14 @@ function deleteStation(stationCode) {
             return;
         }
 
-        // Water chart handlers
+        //การจัดการ Dropdown และปุ่มแสดงกราฟ
+        //น้ำ
         const waterParamSelect = document.getElementById('water-parameter-select');
         const waterChartToggle = document.getElementById('water-chart-toggle');
         const waterChartContainer = document.getElementById('water-chart-container');
 
         if (waterParamSelect) {
+            // เมื่อเปลี่ยนพารามิเตอร์ → แสดงปุ่ม "แสดงกราฟ" แต่ซ่อนกราฟไว้ก่อน
             waterParamSelect.addEventListener('change', function() {
                 if (this.value) {
                     waterChartToggle.style.display = 'inline-block';
@@ -1102,14 +1106,14 @@ function deleteStation(stationCode) {
                     waterChartContainer.style.display = 'none';
                 }
             });
-
+            // เมื่อกดปุ่ม "แสดงกราฟ" → วาดกราฟหรือซ่อนกราฟ
             waterChartToggle.addEventListener('click', function() {
-                if (waterParamSelect.value) {
+                if (waterParamSelect.value) { // ซ่อนกราฟ
                     if (this.classList.contains('active')) {
                         this.classList.remove('active');
                         this.textContent = 'แสดงกราฟ';
                         waterChartContainer.style.display = 'none';
-                    } else {
+                    } else {// แสดงกราฟ
                         this.classList.add('active');
                         this.textContent = 'ซ่อนกราฟ';
                         waterChartContainer.style.display = 'block';
