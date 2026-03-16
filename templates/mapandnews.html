@@ -85,7 +85,7 @@
         <div class="chart-panel-report">
             <h3>📊 แผนภูมิแท่งเปรียบเทียบข้อมูลล่าสุด</h3>
 
-            <!-- ✅ ตัวเลือกรอบตรวจวัด -->
+            <!--ตัวเลือกรอบตรวจวัด -->
             <div class="filter-group" style="margin-bottom: 20px;">
                 <label for="check-select" >เลือกรอบตรวจวัด:</label>
                     <select id="check-select"  onchange="updateChartByTambon()">
@@ -250,7 +250,7 @@ async function fetchTambonData() {
 function populateTambonDropdown() {
     if (!tambonData || !tambonData.tambons) return;
     const select = document.getElementById('tambon-select');
-     // ✅ เริ่มลิสต์จากตำบลแรกเลย
+     // เริ่มลิสต์จากตำบลแรกเลย
     select.innerHTML = '';
     tambonData.tambons.forEach(tambon => {
         if (tambon) select.innerHTML += `<option value="${tambon}">${tambon}</option>`;
@@ -587,14 +587,11 @@ function createAnnotations(paramKey, dataType, unit) {
     return annotations;
 }
 
-// ===== Update Chart By Tambon (พร้อมคาดการณ์แนวโน้ม) =====
-async function updateChartByTambon() { // ดึงข้อมูลตามพารามิเตอร์ที่เลือก
+async function updateChartByTambon() {
     if (!tambonData) await fetchTambonData();
-    
     const tambonKey = document.getElementById('tambon-select').value;
     const paramKey = document.getElementById('param-select').value;
     const selectedCheck = document.getElementById('check-select').value;
-    
     if (!paramKey || !tambonData) return;
     
     let currentData;
@@ -602,9 +599,9 @@ async function updateChartByTambon() { // ดึงข้อมูลตาม�
     
     // ตรวจสอบว่าเลือกรอบล่าสุดหรือรอบย้อนหลัง
     if (selectedCheck === 'latest') {
-        currentData = currentTab === 'water' ? 
+        currentData = currentTab === 'water' ?
             tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
-        unit = currentTab === 'water' ? 
+        unit = currentTab === 'water' ?
             (tambonData.water.parameters[paramKey] || '') : 'mg/kg';
     } else {
         try {
@@ -612,10 +609,9 @@ async function updateChartByTambon() { // ดึงข้อมูลตาม�
                 `/api/data-by-check?check_number=${encodeURIComponent(selectedCheck)}&type=${currentTab}`
             );
             const result = await response.json();
-            
             if (result.success) {
                 currentData = result.data[paramKey];
-                unit = currentTab === 'water' ? 
+                unit = currentTab === 'water' ?
                     (result.parameters[paramKey] || '') : 'mg/kg';
             } else {
                 console.error('❌ Failed to fetch data:', result.error);
@@ -628,88 +624,88 @@ async function updateChartByTambon() { // ดึงข้อมูลตาม�
     }
     
     if (!currentData) return;
-    
     const standardVal = standards[currentTab]?.[paramKey];
     
     // เตรียมข้อมูลสำหรับกราฟ
     let datasetsToShow = [];
     const colors = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6', '#e67e22', '#1abc9c', '#fd79a8'];
-    
     const stations = currentData[tambonKey] || [];
     if (stations.length > 0) {
         datasetsToShow = stations.map((station, idx) => ({
-            label: `${station.station}`, 
+            label: `${station.station}`,
             data: [station.value],
-            backgroundColor: colors[idx % colors.length] + '80', 
-            borderColor: colors[idx % colors.length], 
-            borderWidth: 2, 
+            backgroundColor: colors[idx % colors.length] + '80',
+            borderColor: colors[idx % colors.length],
+            borderWidth: 2,
             pointRadius: 0
         }));
     }
-
-    // สร้างค่ามาตรฐานสำหรับกราฟ (แดง = เกิน, น้ำเงิน = ปลอดภัย)
+    
+    // สร้างค่ามาตรฐานสำหรับกราฟ
     const annotations = createAnnotations(paramKey, currentTab, standardVal, unit);
     
-    // สร้าง/อัพเดทกราฟ
+    // สร้างกราฟ
     const ctx = document.getElementById('mainChart')?.getContext('2d');
     if (!ctx) return;
-    if (chartInstance) chartInstance.destroy(); // ล้างกราฟเก่าก่อนวาดใหม่
-    
-    const labels = datasetsToShow.map(ds => ds.label); 
-    
+    if (chartInstance) chartInstance.destroy();
+    const labels = datasetsToShow.map(ds => ds.label);
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,// ชื่อสถานีเป็นแกน X
+            labels: labels,
             datasets: [{
                 label: `${paramKey} (${unit})`,
-                data: datasetsToShow.map(ds => ds.data[0]),// ค่าเป็นแกน Y
+                data: datasetsToShow.map(ds => ds.data[0]),
                 backgroundColor: datasetsToShow.map(ds => ds.backgroundColor),
                 borderColor: datasetsToShow.map(ds => ds.borderColor),
                 borderWidth: 2
             }]
         },
         options: {
-            responsive: true, 
+            responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },  // ซ่อน legend เพื่อความสะอาด
-                tooltip: { 
-                    callbacks: { 
-                        label: function(context) { 
-                            const val = context.parsed.y; 
-                            return `${val !== null ? val.toFixed(3) : '-'} ${unit}`; 
-                        } 
-                    } 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.parsed.y;
+                            return `${val !== null ? val.toFixed(3) : '-'} ${unit}`;
+                        }
+                    }
                 },
-                annotation: { annotations } // เพิ่มเส้นมาตรฐาน
+                annotation: { annotations }
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     suggestedMax: standardVal ? (currentTab === 'water' ? standardVal * 1.5 : standardVal.unsafe * 1.2) : undefined,
-                    title: { 
-                        display: true, 
-                        text: `ค่า (${unit})`, 
-                        font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' } 
+                    title: {
+                        display: true,
+                        text: `ค่า (${unit})`,
+                        font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' }
                     }
                 },
                 x: {
-                    title: { 
-                        display: true, 
+                    title: {
+                        display: true,
                         text: 'สถานี',
-                        font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' } 
+                        font: { family: "'Noto Sans Thai', sans-serif", size: 12, weight: 'bold' }
                     },
-                    ticks: { maxRotation: 45, minRotation: 45 } // หมุนชื่อสถานีให้อ่านง่าย
+                    ticks: { maxRotation: 45, minRotation: 45 }
                 }
             }
         }
     });
     
-    // แสดงการคาดการณ์แนวโน้ม
-    showTrendPrediction(paramKey, tambonKey, currentTab);
+    // ใช้ await และรอให้ trendBox ถูกสร้างก่อน
+    await showTrendPrediction(paramKey, tambonKey, currentTab);
     
-    updateMapMarkers();
+    //รอเล็กน้อยเพื่อให้ DOM อัพเดท
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // แล้วค่อยเรียก updateMapMarkers (ซึ่งจะเรียก showHealthAdvice)
+    await updateMapMarkers();
 }
 
 // ===== ฟังก์ชันแสดงการคาดการณ์แนวโน้ม (ปรับปรุง) =====
@@ -963,26 +959,28 @@ function updateStationSummary(paramKey, dataType, selectedCheck, exceeds, normal
         summaryBox.className = 'station-summary stable';
     }
     
-    // ✅ เพิ่มคลิกเพื่อดูรายชื่อสถานี
+    // เพิ่มคลิกเพื่อดูรายชื่อสถานี
     const statCards = document.querySelectorAll('.stat-card');
     statCards.forEach(card => {
         card.style.cursor = 'pointer';
     });
     
-    // ✅ ตั้งค่า onclick สำหรับแต่ละการ์ด
+    // ตั้งค่า onclick สำหรับแต่ละการ์ด
     document.querySelector('.stat-card.danger').onclick = () => showStationList('exceeds', paramKey);
     document.querySelector('.stat-card.safe').onclick = () => showStationList('normal', paramKey);
     document.querySelector('.stat-card.no-data').onclick = () => showStationList('noData', paramKey);
     
-    // ✅ ✅ ✅ เพิ่ม onclick สำหรับการ์ด "ทั้งหมด" ให้ไปหน้า stations
+    // การ์ด "ทั้งหมด" ให้ไปหน้า stations
     document.querySelector('.stat-card.total').onclick = () => {
         window.location.href = '/stations';
     };
     
     // แสดงกล่อง
     summaryBox.style.display = 'block';
-    
     console.log(`✅ Station Summary: ${exceeds} exceeds, ${normal} normal, ${noData} no data, ${total} total`);
+    
+    // แสดงคำแนะนำเมื่อมีสถานีที่เกินมาตรฐาน
+    showHealthAdvice(exceeds, normal, noData, paramKey);
 }
 
 // ===== ฟังก์ชันแสดงรายชื่อสถานี (Card แทน Modal) =====
@@ -1050,7 +1048,6 @@ function closeStationList() {
     card.style.display = 'none';
 }
 
-// ===== ฟังก์ชันแสดงคำแนะนำเมื่อเกินมาตรฐาน =====
 function showHealthAdvice(exceeds, normal, noData, paramKey) {
     // ลบการ์ดคำแนะนำเก่า (ถ้ามี)
     const existingAdvice = document.getElementById('health-advice-card');
@@ -1060,46 +1057,58 @@ function showHealthAdvice(exceeds, normal, noData, paramKey) {
     
     // ถ้าไม่มีสถานีที่เกินมาตรฐาน ไม่ต้องแสดง
     if (exceeds === 0) {
+        console.log('ℹ️ No stations exceed standards, skipping advice');
+        return;
+    }
+    
+    // รอให้ trendBox ถูกสร้างก่อน
+    const trendBox = document.getElementById('trend-prediction-box');
+    if (!trendBox) {
+        console.log('⚠️ Trend box not found, skipping advice display');
         return;
     }
     
     // สร้างการ์ดคำแนะนำ
-    const trendBox = document.getElementById('trend-prediction-box');
-    if (!trendBox) return;
-    
     const adviceCard = document.createElement('div');
     adviceCard.id = 'health-advice-card';
     adviceCard.className = 'health-advice-card';
     
-    // คำแนะนำตามพารามิเตอร์
+    //เพิ่มคำแนะนำสำหรับน้ำ
     const adviceData = {
+        // 💧 คำแนะนำสำหรับน้ำ
         'สารหนู': {
-            title: '⚠️ ข้อควรระวังเกี่ยวกับสารหนู',
+            title: '⚠️ ข้อควรระวังเกี่ยวกับสารหนูในน้ำ',
             advice: [
-                'หากค่าที่ตรวจพบเกินมาตรฐาน(มากกว่า 10 ไมโครกรัมต่อลิตร หรือ 0.01 มิลลิกรัมต่อลิตร) อาจส่งผลกระทบต่อสุขภาพอนามัย',
+                'หากค่าที่ตรวจพบเกินมาตรฐาน (มากกว่า 0.01 มก./ล.) อาจส่งผลกระทบต่อสุขภาพอนามัย',
                 'หากจะนำไปอุปโภค-บริโภค ต้องผ่านการปรับปรุงคุณภาพก่อนและอาจเป็นอันตรายต่อสัตว์น้ำ',
-                'ไม่ควรทำการประมงหรือกิจกรรมทางน้ำ',
+                'ไม่ควรทำการประมงหรือกิจกรรมทางน้ำ'
             ]
         },
         'แคดเมียม': {
-            title: '⚠️ ข้อควรระวังเกี่ยวกับแคดเมียม',
+            title: '⚠️ ข้อควรระวังเกี่ยวกับแคดเมียมในน้ำ',
             advice: [
                 'หากค่าที่ตรวจพบเกินมาตรฐาน 0.005 มก./ล. ในน้ำที่มีความกระด้าง น้อยกว่า 100 มก./ล. ถ้าน้ำมีความกระด้างน้อย แคดเมียมจะอยู่ในรูปที่มีความพิษ',
-                'หากค่าที่ตรวจพบเกินมาตรฐาน 0.05 มก./ล. ในน้ำที่มีความกระด้าง มากกว่า 100 มก./ล. ถ้าน้ำมีความกระด้างมาก แคดเมียมจะมีความเป็นพิษน้อย',
+                'หากค่าที่ตรวจพบเกินมาตรฐาน 0.05 มก./ล. ในน้ำที่มีความกระด้าง มากกว่า 100 มก./ล. ถ้าน้ำมีความกระด้างมาก แคดเมียมจะมีความเป็นพิษน้อย'
             ]
-        },
+        }
     };
+     
+    // ใช้ key ที่ถูกต้องสำหรับน้ำและดิน
+    let adviceKey = paramKey;
+    if (currentTab === 'sediment') {
+        adviceKey = paramKey + ' (ดิน)';
+    }
     
-    const advice = adviceData[paramKey] || adviceData['default'];
+    const advice = adviceData[adviceKey] || adviceData['default'];
     
     adviceCard.innerHTML = `
-        <div class="advice-header">
+        <div class="advice-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
             <h4 style="margin: 0; color: #e74c3c;">${advice.title}</h4>
         </div>
-            
+        <div class="advice-content">
             <div class="advice-section" style="margin-top: 10px;">
                 <ul style="margin: 5px 0 0 20px; color: #666; font-size: 0.9em; padding-left: 0;">
-                    ${advice.advice.map(item => `<li style="margin-bottom: 4px;">${item}</li>`).join('')}
+                    ${advice.advice.map(item => `<li style="margin-bottom: 6px; line-height: 1.5;">${item}</li>`).join('')}
                 </ul>
             </div>
         </div>
@@ -1107,6 +1116,7 @@ function showHealthAdvice(exceeds, normal, noData, paramKey) {
     
     // แทรกการ์ดหลัง trend box
     trendBox.parentNode.insertBefore(adviceCard, trendBox.nextSibling);
+    console.log('✅ Advice card displayed for:', adviceKey);
 }
 
 // ===== ส่วนข่าวสาร =====
