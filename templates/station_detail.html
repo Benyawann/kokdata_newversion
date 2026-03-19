@@ -11,7 +11,7 @@
     <div class="container">
     <!-- ย้ายปุ่มย้อนกลับและปุ่มลบมาอยู่ใน header เดียวกัน -->
     <div class="header-actions">
-        <a href="/stations" class="back-button">ย้อนกลับ</a>
+        <a href="/" class="back-button">ย้อนกลับ</a>
         {% if session.logged_in %}
         <div class="station-actions">
              <a href="/edit-station/{{ station.station }}" class="edit-button">
@@ -22,56 +22,76 @@
         </div>
         {% endif %}
     </div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; 
+            margin: 30px 0; align-items: start;">
 
+    <!-- คอลัมน์ซ้าย: แผนที่ -->
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+        <h3 style="margin: 0 0 15px 0; color: #2c3e50; display: flex; align-items: center; gap: 8px;">
+            <span>🗺️</span> ตำแหน่งสถานีบนแผนที่
+        </h3>
+        <div id="station-map" style="height: 400px; width: 100%; border-radius: 8px; 
+             box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+    </div>
+
+    <!-- คอลัมน์ขวา: รายละเอียดสถานี -->
     <div class="header">
-        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 10px;">
-            <h1 style="margin: 0; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">รายละเอียดสถานี</h1>
+        <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <div class="station-code" style="margin: 0; background: #72C4C1; color: white; padding: 8px 20px; border-radius: 20px; 
-                font-weight: bold; font-size: 1.1em; font-family: 'Anuphan', sans-serif;">
-                {{ station.station }}
+                <h1 style="margin: 0; font-size: 2em; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+                    รายละเอียดสถานี
+                </h1>
+                <div class="station-code" style="margin: 0; background: #72C4C1; color: white; 
+                     padding: 8px 20px; border-radius: 20px; font-weight: bold; 
+                     font-size: 1.1em; font-family: 'Anuphan', sans-serif;">
+                    {{ station.station }}
                 </div>
-            </div><!-- กล่องข้อมูลที่มา -->
-            <div style="background-color: #f8f9fa; padding: 15px; margin-top: 20px; margin-bottom: 20px; border-radius: 8px; 
-            border-left: 4px solid #eacf20; font-size: 14px; line-height: 1.6;">
-                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกิน
-                ค่ามาตรฐาน ข้อมูล ณ วันที่ 29 มกราคม 2569 <br>เวลา 16.30 น. สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
             </div>
+
+            <!-- กล่องข้อมูลที่มา -->
+            <div style="background-color: #fff; padding: 15px; border-radius: 8px; 
+                        border-left: 4px solid #eacf20; font-size: 13px; line-height: 1.6;">
+                <strong>ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา 
+                แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกินค่ามาตรฐาน 
+                ข้อมูล ณ วันที่ 29 มกราคม 2569 เวลา 16.30 น. 
+                สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
+            </div>
+
             <!-- รายละเอียดสถานี -->
             <div class="info-grid">
-                <!-- แม่น้ำ -->
                 <div class="info-item">
                     <div class="info-label">
-                        <img src="/static/image/river.png" alt="location icon" style="width: 20px;">
-                        &nbsp; แม่น้ำ</div>
+                        <img src="/static/image/river.png" alt="" style="width: 20px;"> แม่น้ำ
+                    </div>
                     <div class="info-value">{{ station.river }}</div>
                 </div>
-                <!-- ตำบล -->
                 <div class="info-item">
-                    <div class="info-label"> 
-                        <img src="/static/image/pin.png" alt="location icon" style="width: 20px;">&nbsp; ตำบล</div>
+                    <div class="info-label">
+                        <img src="/static/image/pin.png" alt="" style="width: 20px;"> ตำบล
+                    </div>
                     <div class="info-value">{{ station.tambon }}</div>
                 </div>
-                <!-- อำเภอ -->
                 <div class="info-item">
                     <div class="info-label">
-                        <img src="/static/image/bank.png" alt="location icon" style="width: 20px; ">&nbsp; อำเภอ</div>
+                        <img src="/static/image/bank.png" alt="" style="width: 20px;"> อำเภอ
+                    </div>
                     <div class="info-value">{{ station.amphoe }}</div>
                 </div>
-                <!-- จังหวัด -->
                 <div class="info-item">
                     <div class="info-label">
-                        <img src="/static/image/book.png" alt="location icon" style="width: 20px; ">&nbsp; จังหวัด</div>
+                        <img src="/static/image/book.png" alt="" style="width: 20px;"> จังหวัด
+                    </div>
                     <div class="info-value">{{ station.province }}</div>
                 </div>
             </div>
+
             <!-- ที่ตั้ง -->
             <div class="location-box">
-                <img src="/static/image/placeholder.png" alt="location icon" style="width: 20px;">
+                <img src="/static/image/placeholder.png" alt="" style="width: 20px;">
                 <strong>&nbsp; ที่ตั้ง:</strong> {{ station.location }}
             </div>
-        </div>
     </div>
+</div>
 
     </div>
     </div>
@@ -344,7 +364,53 @@
             </div>
         </div>
     </div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lat  = {{ station.lat  | tojson }};
+    const lon  = {{ station.lon  | tojson }};
+    const name = {{ station.station | tojson }};
+    const loc  = {{ station.location | tojson }};
 
+    const mapDiv = document.getElementById('station-map');
+
+    if (!lat || !lon) {
+        // ✅ ไม่มีพิกัด — แสดงข้อความแทน
+        mapDiv.innerHTML = `
+            <div style="height:100%; display:flex; align-items:center; 
+                        justify-content:center; background:#f8f9fa; 
+                        border-radius:8px; color:#888; font-size:1em;">
+                ⚠️ ยังไม่มีข้อมูลพิกัดของสถานีนี้
+            </div>`;
+        return;
+    }
+
+    // ✅ สร้าง Leaflet map
+    const stationMap = L.map('station-map').setView([lat, lon], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(stationMap);
+
+    // ✅ Marker พร้อม popup
+    const marker = L.marker([lat, lon]).addTo(stationMap);
+    marker.bindPopup(`
+        <div style="text-align:center; min-width:180px; padding:6px;">
+            <strong style="color:#2c3e50;">🌊 สถานี ${name}</strong><br>
+            <span style="color:#666; font-size:0.85em;">📍 ${loc}</span><br>
+            <hr style="margin:6px 0; border:0; border-top:1px solid #ddd;">
+            <span style="color:#666; font-size:0.8em;">
+                Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}
+            </span>
+        </div>
+    `).openPopup();
+
+    // ✅ แก้ปัญหา map ขนาดผิดเมื่อ container ยังซ่อนอยู่
+    setTimeout(() => stationMap.invalidateSize(), 100);
+});
+</script>
 <script>
 // ฟังก์ชันแสดง Modal Confirm Delete
 function showDeleteModal(stationCode, onConfirm) {
