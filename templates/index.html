@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>รายการสถานีตรวจสอบ</title>
+        <title>ตำบล</title>
     <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -13,21 +13,12 @@
             <div class="header-actions">
             <a href="/" class="back-button">ย้อนกลับ</a>
         </div>
-            <h1>รายการสถานีตรวจสอบ</h1><span>ระบบแสดงข้อมูลสถานีตรวจสอบคุณภาพน้ำและดิน</span>
+            <h1>ตำบล</h1>
         </div>
 
 
         <div class="header-buttons" id="header-buttons">
         </div>
-
-        {% if session.logged_in %}
-         <div class="user-info top-right">
-            สวัสดี, {{ session.username or 'Admin' }}!
-            <a href="/logout" class="logout-btn" id="logoutBtn" data-logout-url="/logout">ออกจากระบบ</a>
-        </div>
-        {% else %}
-            <a href="/login" class="login-btn top-right">เข้าสู่ระบบ</a>
-        {% endif %}
 
         <!-- search -->
         <div class="left-panel">
@@ -133,88 +124,8 @@
             ไม่พบสถานีที่ค้นหา
         </div>
     </div>
-        {% if session.logged_in %}
-            <a href="/static/pages/addstation.html">
-            <button class="floating-button" id="add"> + </button>
-            </a>
-        {% endif %}
-    <!-- Modal Confirm Logout -->
-    <div id="logoutModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-icon warning">⚠️</div>
-            <h3>ยืนยันการออกจากระบบ</h3>
-            <p>คุณต้องการออกจากระบบหรือไม่?</p>
-            <div class="modal-buttons">
-                <button id="modalCancelBtn" class="btn-modal btn-modal-secondary">ยกเลิก</button>
-                <button id="modalConfirmBtn" class="btn-modal btn-modal-danger">ออกจากระบบ</button>
-            </div>
-        </div>
-    </div>
 
     <script id>
-        // ฟังก์ชันแสดง Modal Confirm
-        function showLogoutModal(onConfirm) {
-            const modal = document.getElementById('logoutModal');
-            const confirmBtn = document.getElementById('modalConfirmBtn');
-            const cancelBtn = document.getElementById('modalCancelBtn');
-            
-            modal.classList.add('active'); // แสดง Modal
-            // Event Listeners: ปุ่มยืนยัน, ยกเลิก, คลิกพื้นหลัง, กด Esc
-            const handleConfirm = () => {
-                modal.classList.remove('active');
-                if (onConfirm) onConfirm(); // รันฟังก์ชันต่อ (เช่น เปลี่ยนหน้า)
-                cleanup();
-            };
-            
-            const handleCancel = () => {
-                modal.classList.remove('active');
-                cleanup();
-            };
-            
-            const handleOverlayClick = (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                    cleanup();
-                }
-            };
-            
-            const cleanup = () => {
-                confirmBtn?.removeEventListener('click', handleConfirm);
-                cancelBtn?.removeEventListener('click', handleCancel);
-                modal?.removeEventListener('click', handleOverlayClick);
-                document.removeEventListener('keydown', handleEsc);
-            };
-            
-            const handleEsc = (e) => {
-                if (e.key === 'Escape') {
-                    modal.classList.remove('active');
-                    cleanup();
-                }
-            };
-            
-            confirmBtn?.addEventListener('click', handleConfirm);
-            cancelBtn?.addEventListener('click', handleCancel);
-            modal?.addEventListener('click', handleOverlayClick);
-            document.addEventListener('keydown', handleEsc);
-        }
-        
-        // จัดการคลิกปุ่มออกจากระบบ
-        document.addEventListener('DOMContentLoaded', () => {
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', (e) => {
-                    e.preventDefault(); // ป้องกันการ redirect ทันที
-                    const logoutUrl = logoutBtn.dataset.logoutUrl || '/logout';
-                    
-                    // แสดง Modal Confirm
-                    showLogoutModal(() => {
-                        // ถ้ากด "ออกจากระบบ" ใน modal → redirect ไป logout
-                        window.location.href = logoutUrl;
-                    });
-                });
-            }
-        });
-
         // Location hierarchy data from backend
         const locationHierarchy = {{ location_hierarchy|tojson }};
         
