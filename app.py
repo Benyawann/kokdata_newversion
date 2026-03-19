@@ -12,25 +12,21 @@ import secrets #ใช้สร้าง Secret Key ของ Flask
 from dotenv import load_dotenv #ใช้จัดการ Environment Variables เช่น รหัสผ่าน ,URL Database
 import requests # ใช้ดึงข้อมูลข่าวจากเว็บภายนอก
 from bs4 import BeautifulSoup # ใช้ดึงข้อมูลข่าวจากเว็บภายนอก
-from datetime import datetime 
+from datetime import datetime
 from functools import lru_cache
 import time
 
-_last_ryt9 = {'data': None, 'timestamp': 0}
-CACHE_DURATION = 1800  # 30 นาที
-
 load_dotenv()  # โหลดทันทีหลัง import
-
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16) #ใช้สำหรับจัดการ Session (การเข้าสู่ระบบ)
 app.config['JSON_AS_ASCII'] = False
 
 # === Register API Blueprint ===
 from api.index import api_bp
-app.register_blueprint(api_bp) #ลงทะเบียน API Blueprint 
+app.register_blueprint(api_bp) #ลงทะเบียน API Blueprint
 
 #  ฟังก์ชันสำหรับสร้างการเชื่อมต่อไปยังฐานข้อมูล โดยใช้ URL จาก SUPABASE_DATABASE_URL
-def get_db(): 
+def get_db():
     db_url = os.environ.get('SUPABASE_DATABASE_URL')
     if not db_url:
         raise ValueError("SUPABASE_DATABASE_URL not set in environment")
@@ -44,55 +40,50 @@ def init_db():
     try:
         conn = get_db()
         cur = conn.cursor()
-        
         # ตารางสถานี
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS station_data (
-                id SERIAL PRIMARY KEY,
-                station TEXT UNIQUE NOT NULL,
-                river TEXT, tambon TEXT, amphoe TEXT, province TEXT, location TEXT
-            )
+        CREATE TABLE IF NOT EXISTS station_data (
+            id SERIAL PRIMARY KEY,
+            station TEXT UNIQUE NOT NULL,
+            river TEXT, tambon TEXT, amphoe TEXT, province TEXT, location TEXT,
+            lat DECIMAL(10, 7),   
+            lon DECIMAL(10, 7) 
+        )
         """)
-        
         # ตารางข้อมูลน้ำ — ใช้ station TEXT (ไม่ใช่ station_id)
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS water_data (
-                id SERIAL PRIMARY KEY,
-                station TEXT REFERENCES station_data(station) ON DELETE CASCADE,
-                parameter TEXT, unit TEXT, location TEXT,
-                check_number TEXT, value TEXT, numeric_value REAL
-            )
+        CREATE TABLE IF NOT EXISTS water_data (
+            id SERIAL PRIMARY KEY,
+            station TEXT REFERENCES station_data(station) ON DELETE CASCADE,
+            parameter TEXT, unit TEXT, location TEXT,
+            check_number TEXT, value TEXT, numeric_value REAL
+        )
         """)
-        
         # ตารางข้อมูลดิน — ใช้ station TEXT เช่นกัน
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS soil_data (
-                id SERIAL PRIMARY KEY,
-                station TEXT REFERENCES station_data(station) ON DELETE CASCADE,
-                parameter TEXT, location TEXT,
-                check_number TEXT, value TEXT, numeric_value REAL
-            )
+        CREATE TABLE IF NOT EXISTS soil_data (
+            id SERIAL PRIMARY KEY,
+            station TEXT REFERENCES station_data(station) ON DELETE CASCADE,
+            parameter TEXT, location TEXT,
+            check_number TEXT, value TEXT, numeric_value REAL
+        )
         """)
-        
         # ตาราง users
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
-            )
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
         """)
-        
         # Indexes — ใช้ชื่อคอลัมน์ที่ถูกต้อง (station)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_water_station ON water_data(station)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_soil_station ON soil_data(station)")
-        
         # สร้าง admin user
         cur.execute('SELECT COUNT(*) FROM users WHERE username = %s', ('admin',))
         if cur.fetchone()[0] == 0:
             cur.execute('INSERT INTO users (username, password) VALUES (%s, %s)', ('admin', 'admin123'))
             print("✅ สร้าง user admin: username='admin', password='admin123'")
-        
         conn.commit()
         print("✅ ตารางฐานข้อมูลพร้อมใช้งาน")
     except Exception as e:
@@ -137,35 +128,29 @@ def login(): # รับค่า username กับ password จาก form
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        
         print(f"🔍 DEBUG: login attempt - username='{username}'")
-        
         # ตรวจสอบว่าเป็น AJAX request หรือไม่
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
         conn = get_db()
         cur = conn.cursor()
         cur.execute("SELECT password FROM users WHERE username = %s", (username,))
         row = cur.fetchone()
         conn.close()
-        
         print(f"🔍 DEBUG: DB result - {row}")
-        
         if row and row['password'] == password:
             # เข้าสู่ระบบสำเร็จ
             session['logged_in'] = True
             session['username'] = username
-            
             if is_ajax:
                 # คืนค่า JSON สำหรับ AJAX
                 return jsonify({
                     'success': True,
                     'message': 'เข้าสู่ระบบสำเร็จ',
-                    'redirect_url': url_for('stations_manage')
+                    'redirect_url': url_for('index')
                 })
             else:
                 # Redirect สำหรับ form submit ปกติ (รองรับกรณีไม่มี JS)
-                return redirect(url_for('stations_manage'))
+                return redirect(url_for('index'))
         else:
             # กรณี เข้าสู่ระบบไม่สำเร็จ
             if is_ajax:
@@ -176,7 +161,6 @@ def login(): # รับค่า username กับ password จาก form
             else:
                 flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณากรอกใหม่', 'error')
                 return redirect(url_for('login'))
-    
     # GET request: แสดงหน้า login
     return render_template('login.html')
 
@@ -184,7 +168,7 @@ def login(): # รับค่า username กับ password จาก form
 @app.route('/logout')
 def logout(): # ออกแล้วจะเด้งกลับไปหน้าหลัก
     session.clear()
-    return redirect(url_for('stations_manage'))
+    return redirect(url_for('index'))
 
 # === CORS Headers ===
 @app.after_request
@@ -199,9 +183,9 @@ def get_stations():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, station, river, tambon, amphoe, province, location
-        FROM station_data
-        ORDER BY river, station
+    SELECT id, station, river, tambon, amphoe, province, location
+    FROM station_data
+    ORDER BY river, station
     """)
     stations = cur.fetchall()
     conn.close()
@@ -217,7 +201,6 @@ def stations_manage():
         unique_provinces = sorted(list(set([s['province'] for s in stations if s['province']])))
         unique_tambons = sorted(list(set([s['tambon'] for s in stations if s['tambon']])))
         unique_amphoes = sorted(list(set([s['amphoe'] for s in stations if s['amphoe']])))
-        
         location_hierarchy = {}
         for station in stations:
             prov = station.get('province', '')
@@ -232,14 +215,13 @@ def stations_manage():
         for prov in location_hierarchy:
             for amph in location_hierarchy[prov]:
                 location_hierarchy[prov][amph] = sorted(list(location_hierarchy[prov][amph]))
-        
-        return render_template('index.html', 
-                             stations=stations,
-                             unique_rivers=unique_rivers,
-                             unique_provinces=unique_provinces,
-                             unique_tambons=unique_tambons,
-                             unique_amphoes=unique_amphoes,
-                             location_hierarchy=location_hierarchy)
+        return render_template('index.html',
+            stations=stations,
+            unique_rivers=unique_rivers,
+            unique_provinces=unique_provinces,
+            unique_tambons=unique_tambons,
+            unique_amphoes=unique_amphoes,
+            location_hierarchy=location_hierarchy)
     except Exception as e:
         return f"Error loading page: {str(e)}", 500
 
@@ -248,14 +230,13 @@ def stations_manage():
 def test():
     return "Flask app is working with PostgreSQL!"
 
-# === Get Station by Code ===
 def get_station_by_code(station_code):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, station, river, tambon, amphoe, province, location
-        FROM station_data
-        WHERE TRIM(station) = %s
+    SELECT id, station, river, tambon, amphoe, province, location, lat, lon
+    FROM station_data
+    WHERE TRIM(station) = %s
     """, (station_code.strip(),))
     row = cur.fetchone()
     conn.close()
@@ -266,32 +247,28 @@ def get_water_data(station_code):
     conn = get_db()
     cur = conn.cursor()
     cur.execute(r"""
-        SELECT parameter, unit, location, check_number, value, numeric_value
-        FROM water_data
-        WHERE TRIM(station) = %s
-        ORDER BY 
-            NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
-            check_number,
-            parameter
+    SELECT parameter, unit, location, check_number, value, numeric_value
+    FROM water_data
+    WHERE TRIM(station) = %s
+    ORDER BY
+        NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+        check_number,
+        parameter
     """, (station_code.strip(),))
-    
     pivot_data = {}
     numeric_data = {}
     check_numbers = []
     unit_info = {}
-    
     for row in cur.fetchall():
         param = row['parameter']
         check_num = row['check_number']
         value = row['value']
         numeric_value = row['numeric_value'] if row['numeric_value'] is not None else 0
         unit = row['unit']
-        
         if param not in pivot_data:
             pivot_data[param] = {}
             numeric_data[param] = {}
             unit_info[param] = unit
-        
         try:
             check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
             if check_num_int not in check_numbers:
@@ -303,13 +280,10 @@ def get_water_data(station_code):
                 check_numbers.append(check_num)
             pivot_data[param][check_num] = value
             numeric_data[param][check_num] = numeric_value
-    
     conn.close()
-    
     numeric_checks = sorted([c for c in check_numbers if isinstance(c, int)])
     text_checks = sorted([c for c in check_numbers if not isinstance(c, int)])
     sorted_checks = numeric_checks + text_checks
-    
     parameters = sorted(pivot_data.keys())
     pivot_list = []
     for param in parameters:
@@ -318,7 +292,6 @@ def get_water_data(station_code):
             value = pivot_data[param].get(check_num, None)
             row_data['check_values'][str(check_num)] = value if value else None
         pivot_list.append(row_data)
-    
     pivot_list_filtered = []
     for param in parameters:
         row_data_filtered = {'parameter': param, 'check_values': {}, 'numeric_values': {}, 'unit': unit_info.get(param, '')}
@@ -328,7 +301,6 @@ def get_water_data(station_code):
             row_data_filtered['check_values'][str(check_num)] = value if value else None
             row_data_filtered['numeric_values'][str(check_num)] = numeric_value
         pivot_list_filtered.append(row_data_filtered)
-    
     return {
         'pivot': pivot_data,
         'pivot_list': pivot_list,
@@ -343,29 +315,25 @@ def get_soil_data(station_code):
     conn = get_db()
     cur = conn.cursor()
     cur.execute(r"""
-        SELECT parameter, location, check_number, value, numeric_value
-        FROM soil_data
-        WHERE TRIM(station) = %s
-        ORDER BY 
-            NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
-            check_number,
-            parameter
+    SELECT parameter, location, check_number, value, numeric_value
+    FROM soil_data
+    WHERE TRIM(station) = %s
+    ORDER BY
+        NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+        check_number,
+        parameter
     """, (station_code.strip(),))
-    
     pivot_data = {}
     numeric_data = {}
     check_numbers = []
-    
     for row in cur.fetchall():
         param = row['parameter']
         check_num = row['check_number']
         value = row['value']
         numeric_value = row['numeric_value'] if row['numeric_value'] is not None else 0
-        
         if param not in pivot_data:
             pivot_data[param] = {}
             numeric_data[param] = {}
-        
         try:
             check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
             if check_num_int not in check_numbers:
@@ -377,13 +345,10 @@ def get_soil_data(station_code):
                 check_numbers.append(check_num)
             pivot_data[param][check_num] = value
             numeric_data[param][check_num] = numeric_value
-    
     conn.close()
-    
     numeric_checks = sorted([c for c in check_numbers if isinstance(c, int)])
     text_checks = sorted([c for c in check_numbers if not isinstance(c, int)])
     sorted_checks = numeric_checks + text_checks
-    
     parameters = sorted(pivot_data.keys())
     pivot_list = []
     for param in parameters:
@@ -392,7 +357,6 @@ def get_soil_data(station_code):
             value = pivot_data[param].get(check_num, None)
             row_data['check_values'][str(check_num)] = value if value else None
         pivot_list.append(row_data)
-    
     pivot_list_filtered = []
     for param in parameters:
         row_data_filtered = {'parameter': param, 'check_values': {}, 'numeric_values': {}}
@@ -402,7 +366,6 @@ def get_soil_data(station_code):
             row_data_filtered['check_values'][str(check_num)] = value if value else None
             row_data_filtered['numeric_values'][str(check_num)] = numeric_value
         pivot_list_filtered.append(row_data_filtered)
-    
     return {
         'pivot': pivot_data,
         'pivot_list': pivot_list,
@@ -412,8 +375,6 @@ def get_soil_data(station_code):
     }
 
 # === Add Station Route ===
-#GET: แสดงฟอร์ม
-#POST: รับค่าจากฟอร์ม (ข้อมูลสถานี, ค่าตรวจน้ำ, ค่าตรวจดิน) แล้วบันทึกลงฐานข้อมูล
 @app.route('/add-station', methods=['GET', 'POST'])
 @login_required
 def add_station():
@@ -426,149 +387,114 @@ def add_station():
             amphoe = request.form.get('amphoe', '').strip()
             province = request.form.get('province', '').strip()
             location = request.form.get('location', '').strip()
+            lat = request.form.get('lat', '').strip()
+            lon = request.form.get('lon', '').strip()
+
+            lat_value = float(lat) if lat else None
+            lon_value = float(lon) if lon else None
 
             # === Debug: พิมพ์ข้อมูลที่ได้รับ ===
             print(f"\n🔍 === DEBUG: Add Station ===")
             print(f"📍 station={station}")
             print(f"📍 location={location}")
-            
             # ดึงพารามิเตอร์น้ำ
             parameters = request.form.getlist('parameter[]')
             units = request.form.getlist('unit[]')
             print(f"💧 parameters={parameters}")
             print(f"💧 units={units}")
-            
             # ดึงพารามิเตอร์ดิน
             soil_params = request.form.getlist('soil_parameter[]')
             print(f"🌱 soil_params={soil_params}")
-            
-            # ดึงค่าตรวจน้ำ (3 ครั้งแรกสำหรับ debug)
-            for i in range(1, 4):
-                check_vals = request.form.getlist(f'check{i}[]')
-                if check_vals:
-                    print(f"💧 check{i}={check_vals}")
-            
-            # ดึงค่าตรวจดิน (3 ครั้งแรกสำหรับ debug)
-            for i in range(1, 4):
-                soil_check_vals = request.form.getlist(f'soil_check{i}[]')
-                if soil_check_vals:
-                    print(f"🌱 soil_check{i}={soil_check_vals}")
-            print(f"🔍 === End Debug ===\n")
-
             conn = get_db()
             cur = conn.cursor()
-            
             # === 1. บันทึกสถานี ===
             cur.execute("""
-                INSERT INTO station_data (station, river, tambon, amphoe, province, location)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (station) DO UPDATE SET
-                    river = EXCLUDED.river,
-                    tambon = EXCLUDED.tambon,
-                    amphoe = EXCLUDED.amphoe,
-                    province = EXCLUDED.province,
-                    location = EXCLUDED.location
-            """, (station, river, tambon, amphoe, province, location))
+            INSERT INTO station_data (station, river, tambon, amphoe, province, location, lat, lon)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (station) DO UPDATE SET
+                river = EXCLUDED.river,
+                tambon = EXCLUDED.tambon,
+                amphoe = EXCLUDED.amphoe,
+                province = EXCLUDED.province,
+                location = EXCLUDED.location,
+                lat = EXCLUDED.lat,
+                lon = EXCLUDED.lon
+            """, (station, river, tambon, amphoe, province, location, lat_value, lon_value))
             print(f"✅ Saved station: {station}")
-
             # === 2. บันทึกข้อมูลน้ำ ===
             water_count = 0
             water_check_count = int(request.form.get('water_check_count', 14))
-            
             for i in range(1, water_check_count + 1):
                 check_values = request.form.getlist(f'check{i}[]')
-                # ข้ามถ้าไม่มีค่าสำหรับครั้งที่ i นี้
                 if not check_values or all(v == '' for v in check_values):
                     continue
-                    
                 for idx, param in enumerate(parameters):
                     if idx >= len(check_values):
                         break
                     value = check_values[idx].strip() if check_values[idx] else ''
-                    # ข้ามถ้าค่าว่าง
                     if not value:
                         continue
-                        
                     unit = units[idx].strip() if idx < len(units) else ''
-                    
-                    # แปลงค่าเป็นตัวเลขถ้าเป็นไปได้
                     numeric_value = None
                     if value and value not in ['-', 'ND', '']:
                         try:
                             numeric_value = 0.0 if value.startswith('<') else float(value)
                         except ValueError:
                             pass
-                    
                     cur.execute("""
-                        INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (station, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
                     water_count += 1
-            
             print(f"✅ Saved {water_count} water data records")
-
             # === 3. บันทึกข้อมูลดิน ===
             soil_count = 0
             soil_check_count = int(request.form.get('soil_check_count', 8))
-            
             for i in range(1, soil_check_count + 1):
                 soil_check_values = request.form.getlist(f'soil_check{i}[]')
                 if not soil_check_values or all(v == '' for v in soil_check_values):
                     continue
-                    
                 for idx, param in enumerate(soil_params):
                     if idx >= len(soil_check_values):
                         break
                     value = soil_check_values[idx].strip() if soil_check_values[idx] else ''
                     if not value:
                         continue
-                        
                     numeric_value = None
                     if value and value not in ['-', 'ND', '']:
                         try:
                             numeric_value = 0.0 if value.startswith('<') else float(value)
                         except ValueError:
                             pass
-                    
                     cur.execute("""
-                        INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     """, (station, param, location, f'ครั้งที่ {i}', value, numeric_value))
                     soil_count += 1
-            
             print(f"✅ Saved {soil_count} soil data records")
-
             conn.commit()
             conn.close()
-            
             return jsonify({
-                'success': True, 
+                'success': True,
                 'message': 'Saved successfully',
-                'water': water_count, 
+                'water': water_count,
                 'soil': soil_count
             })
-
         except Exception as e:
             print(f"❌ Error saving station: {e}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'message': str(e)}), 500
-
     return render_template('add_station.html')
 
 # === Delete Station Route ===
-# ลบจาก station_data
 @app.route('/delete-station/<station_code>', methods=['DELETE'])
 @login_required
 def delete_station(station_code):
     try:
         conn = get_db()
         cur = conn.cursor()
-        
-        # ON DELETE CASCADE จะลบ water_data และ soil_data ให้เอง
-        # ลบแค่ station_data ก็พอ
         cur.execute('DELETE FROM station_data WHERE station = %s', (station_code.strip(),))
-        
         conn.commit()
         conn.close()
         return jsonify({'success': True})
@@ -577,25 +503,18 @@ def delete_station(station_code):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # === Station Detail Route ===
-#น้าแสดงรายละเอียดสถานี ดึงข้อมูลสถานี, ข้อมูลน้ำ, ข้อมูลดิน ของสถานีนั้นๆ
 @app.route('/station/<station_code>')
 def station_detail(station_code):
     try:
-        station = get_station_by_code(station_code)
+        station = get_station_by_code(station_code)  # ✅ มี lat/lon แล้ว
         if not station:
             return f"ไม่พบสถานี: {station_code}", 404
-        
         water_data = get_water_data(station_code)
         soil_data = get_soil_data(station_code)
-        
-        # Debug
-        print(f"DEBUG: water_data = {water_data}")
-        print(f"DEBUG: soil_data = {soil_data}")
-        
         return render_template('station_detail.html',
-                             station=station,
-                             water_data=water_data,
-                             soil_data=soil_data)
+            station=station,          # ✅ station มี lat/lon
+            water_data=water_data,
+            soil_data=soil_data)
     except Exception as e:
         print(f"ERROR: {e}")
         import traceback
@@ -603,8 +522,6 @@ def station_detail(station_code):
         return f"Error loading station: {str(e)}", 500
 
 # === Edit Station Route ===
-#GET: ดึงข้อมูลเดิมมาแสดงในฟอร์ม
-#POST: อัปเดตข้อมูลสถานี และ ลบข้อมูลน้ำ/ดินเก่าทิ้งแล้วใส่ใหม่ 
 @app.route('/edit-station/<station_code>', methods=['GET', 'POST'])
 @login_required
 def edit_station(station_code):
@@ -616,26 +533,32 @@ def edit_station(station_code):
             amphoe = request.form['amphoe'].strip()
             province = request.form['province'].strip()
             location = request.form['location'].strip()
+            lat_str = request.form.get('lat', '').strip()
+            lon_str = request.form.get('lon', '').strip()
 
+            try:
+                lat = float(lat_str) if lat_str else None
+            except ValueError:
+                lat = None
+            try:
+                lon = float(lon_str) if lon_str else None
+            except ValueError:
+                lon = None
+            
             conn = get_db()
             cur = conn.cursor()
-
             # อัปเดตข้อมูลสถานี
             cur.execute("""
-                UPDATE station_data 
-                SET station = %s, river = %s, tambon = %s, amphoe = %s, province = %s, location = %s
-                WHERE station = %s
-            """, (station, river, tambon, amphoe, province, location, station_code))
-
-            # ✅ ลบเฉพาะข้อมูลน้ำและดินเดิม (ไม่ต้องลบ station_data เพราะเราแค่ UPDATE)
+            UPDATE station_data
+            SET station = %s, river = %s, tambon = %s, amphoe = %s, province = %s, location = %s,  lat = %s, lon = %s
+            WHERE station = %s
+            """, (station, river, tambon, amphoe, province, location, lat, lon, station_code))
+            # ลบเฉพาะข้อมูลน้ำและดินเดิม
             cur.execute('DELETE FROM water_data WHERE station = %s', (station_code.strip(),))
             cur.execute('DELETE FROM soil_data WHERE station = %s', (station_code.strip(),))
-            # ❌ ลบบรรทัดนี้: cur.execute('DELETE FROM station_data WHERE station = %s', ...)
-
             parameters = request.form.getlist('parameter[]')
             units = request.form.getlist('unit[]')
-            soil_params = request.form.getlist('soil_parameter[]') 
-
+            soil_params = request.form.getlist('soil_parameter[]')
             # บันทึกข้อมูลน้ำใหม่
             water_check_count = int(request.form.get('water_check_count', 14))
             for i in range(1, water_check_count + 1):
@@ -651,10 +574,9 @@ def edit_station(station_code):
                             except ValueError:
                                 pass
                         cur.execute("""
-                            INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         """, (station, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
-
             # บันทึกข้อมูลดินใหม่
             soil_check_count = int(request.form.get('soil_check_count', 8))
             for i in range(1, soil_check_count + 1):
@@ -669,59 +591,46 @@ def edit_station(station_code):
                             except ValueError:
                                 pass
                         cur.execute("""
-                            INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
-                            VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         """, (station, param, location, f'ครั้งที่ {i}', value, numeric_value))
-            
             conn.commit()
             conn.close()
             return jsonify({'success': True})
-
         except Exception as e:
             print(f"ERROR in edit_station POST: {e}")
             import traceback
             traceback.print_exc()
             return jsonify({'success': False, 'error': str(e)}), 500
-    
     # === GET: ดึงข้อมูลเดิมมา pre-fill ===
     try:
         conn = get_db()
         cur = conn.cursor()
-
-        # ดึงข้อมูลสถานี (แยก execute กับ fetchone)
         cur.execute("""
-            SELECT river, station, location, tambon, amphoe, province
-            FROM station_data WHERE station = %s
+        SELECT river, station, location, tambon, amphoe, province, lat, lon
+        FROM station_data WHERE station = %s
         """, (station_code.strip(),))
         station_row = cur.fetchone()
-
         if not station_row:
             conn.close()
             return "ไม่พบสถานี", 404
-
-        # ดึงข้อมูลน้ำ (แยก execute กับ fetchall)
         cur.execute(r"""
-            SELECT parameter, unit, check_number, value
-            FROM water_data WHERE station = %s
-            ORDER BY 
-                NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
-                check_number
+        SELECT parameter, unit, check_number, value
+        FROM water_data WHERE station = %s
+        ORDER BY
+            NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+            check_number
         """, (station_code.strip(),))
-        water_rows = cur.fetchall()  # ← แยกจาก execute()
-
-        # ดึงข้อมูลดิน (แยก execute กับ fetchall)
+        water_rows = cur.fetchall()
         cur.execute(r"""
-            SELECT parameter, check_number, value
-            FROM soil_data WHERE station = %s
-            ORDER BY 
-                NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
-                check_number
+        SELECT parameter, check_number, value
+        FROM soil_data WHERE station = %s
+        ORDER BY
+            NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST,
+            check_number
         """, (station_code.strip(),))
-        soil_rows = cur.fetchall()  # ← แยกจาก execute()
-
+        soil_rows = cur.fetchall()
         conn.close()
-
-        # จัดรูปแบบข้อมูลสำหรับ template
         water_data = {}
         for row in water_rows:
             param = row['parameter']
@@ -729,7 +638,6 @@ def edit_station(station_code):
                 water_data[param] = {'unit': row['unit'], 'checks': {}}
             check_num = row['check_number']
             water_data[param]['checks'][check_num] = row['value']
-
         soil_data = {}
         for row in soil_rows:
             param = row['parameter']
@@ -737,31 +645,144 @@ def edit_station(station_code):
                 soil_data[param] = {'checks': {}}
             check_num = row['check_number']
             soil_data[param]['checks'][check_num] = row['value']
-
         water_check_count = len(next(iter(water_data.values()))['checks']) if water_data else 14
         soil_check_count = len(next(iter(soil_data.values()))['checks']) if soil_data else 8
-
         return render_template('edit_station.html',
-                             station=station_row,
-                             water_data=water_data,
-                             soil_data=soil_data,
-                             water_check_count=water_check_count,
-                             soil_check_count=soil_check_count)
-
+            station=station_row,
+            station_lat = station_row.get('lat'),
+            station_lon = station_row.get('lon'),
+            water_data=water_data,
+            soil_data=soil_data,
+            water_check_count=water_check_count,
+            soil_check_count=soil_check_count)
     except Exception as e:
         print(f"ERROR in edit_station GET: {e}")
         import traceback
         traceback.print_exc()
         return f"Error loading edit form: {str(e)}", 500
-    
-@app.route('/env-test') # Route สำหรับตรวจสอบสถานะฐานข้อมูลและ Environment Variables (ใช้ตอนพัฒนา)
+
+# ค่าคงที่ — เพิ่มบนสุดของไฟล์ถัดจาก import
+WATER_CHECK_COUNT = 15
+SOIL_CHECK_COUNT  = 9
+
+@app.route('/api/stations', methods=['POST'])
+def api_add_station():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'ไม่พบข้อมูล JSON'}), 400
+
+        station  = str(data.get('station',  '') or '').strip()
+        river    = str(data.get('river',    '') or '').strip()
+        tambon   = str(data.get('tambon',   '') or '').strip()
+        amphoe   = str(data.get('amphoe',   '') or '').strip()
+        province = str(data.get('province', '') or '').strip()
+        location = str(data.get('location', '') or '').strip()
+
+        lat_raw = data.get('lat')
+        lon_raw = data.get('lon')
+        try:
+            lat = float(str(lat_raw).strip()) if lat_raw not in [None, '', 'null'] else None
+        except (TypeError, ValueError):
+            lat = None
+
+        try:
+            lon = float(str(lon_raw).strip()) if lon_raw not in [None, '', 'null'] else None
+        except (TypeError, ValueError):
+            lon = None
+
+        print(f"📥 lat_raw={repr(lat_raw)} → lat={lat}")
+        print(f"📥 lon_raw={repr(lon_raw)} → lon={lon}")
+
+        if not station:
+            return jsonify({'success': False, 'message': 'กรุณาระบุรหัสสถานี'}), 400
+
+        conn = get_db()
+        cur  = conn.cursor()
+
+        # ✅ INSERT พร้อม lat, lon
+        cur.execute("""
+            INSERT INTO station_data
+                (station, river, tambon, amphoe, province, location, lat, lon)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (station) DO UPDATE SET
+                river    = EXCLUDED.river,
+                tambon   = EXCLUDED.tambon,
+                amphoe   = EXCLUDED.amphoe,
+                province = EXCLUDED.province,
+                location = EXCLUDED.location,
+                lat      = EXCLUDED.lat,
+                lon      = EXCLUDED.lon
+        """, (station, river, tambon, amphoe, province, location, lat, lon))
+
+        # บันทึกข้อมูลน้ำ
+        water_count = 0
+        for row in data.get('waterData', []):
+            param = str(row.get('parameter', '') or '').strip()
+            unit  = str(row.get('unit', '')      or '').strip()
+            if not param:
+                continue
+            for i in range(1, WATER_CHECK_COUNT + 1):
+                value = str(row.get(f'check{i}', '') or '').strip()
+                if not value:
+                    continue
+                numeric_value = None
+                if value not in ['-', 'ND']:
+                    try:
+                        numeric_value = 0.0 if value.startswith('<') else float(value)
+                    except ValueError:
+                        pass
+                cur.execute("""
+                    INSERT INTO water_data
+                        (station, parameter, unit, location, check_number, value, numeric_value)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (station, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
+                water_count += 1
+
+        # บันทึกข้อมูลดิน
+        soil_count = 0
+        for row in data.get('soilData', []):
+            param = str(row.get('parameter', '') or '').strip()
+            if not param:
+                continue
+            for i in range(1, SOIL_CHECK_COUNT + 1):
+                value = str(row.get(f'check{i}', '') or '').strip()
+                if not value:
+                    continue
+                numeric_value = None
+                if value not in ['-', 'ND']:
+                    try:
+                        numeric_value = 0.0 if value.startswith('<') else float(value)
+                    except ValueError:
+                        pass
+                cur.execute("""
+                    INSERT INTO soil_data
+                        (station, parameter, location, check_number, value, numeric_value)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (station, param, location, f'ครั้งที่ {i}', value, numeric_value))
+                soil_count += 1
+
+        conn.commit()
+        conn.close()
+
+        print(f"✅ บันทึกสำเร็จ: {station} lat={lat} lon={lon} น้ำ={water_count} ดิน={soil_count}")
+        return jsonify({'success': True, 'message': 'บันทึกสำเร็จ',
+                        'station': station, 'lat': lat, 'lon': lon,
+                        'water': water_count, 'soil': soil_count})
+
+    except Exception as e:
+        print(f"❌ api_add_station error: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/env-test')
 def env_test():
     return {
         'POSTGRES_HOST': os.environ.get('POSTGRES_HOST'),
         'DATABASE_URL': os.environ.get('DATABASE_URL')[:50] + '...' if os.environ.get('DATABASE_URL') else None
     }
 
-@app.route('/check-env') # Route สำหรับตรวจสอบสถานะฐานข้อมูลและ Environment Variables (ใช้ตอนพัฒนา)
+@app.route('/check-env')
 def check_env():
     return {
         "SUPABASE_DATABASE_URL": "SET" if os.environ.get('SUPABASE_DATABASE_URL') else "NOT SET",
@@ -778,7 +799,6 @@ def index():
         unique_provinces = sorted(list(set([s['province'] for s in stations if s['province']])))
         unique_tambons = sorted(list(set([s['tambon'] for s in stations if s['tambon']])))
         unique_amphoes = sorted(list(set([s['amphoe'] for s in stations if s['amphoe']])))
-        
         location_hierarchy = {}
         for station in stations:
             prov = station.get('province', '')
@@ -790,86 +810,65 @@ def index():
                 if amph not in location_hierarchy[prov]:
                     location_hierarchy[prov][amph] = set()
                 location_hierarchy[prov][amph].add(tamb)
-        
         for prov in location_hierarchy:
             for amph in location_hierarchy[prov]:
                 location_hierarchy[prov][amph] = sorted(list(location_hierarchy[prov][amph]))
-        
-        # โหลดหน้า mapandnews.html เป็นหน้าหลัก
         return render_template('mapandnews.html',
-                           stations=stations,
-                           unique_rivers=unique_rivers,
-                           unique_provinces=unique_provinces,
-                           unique_tambons=unique_tambons,
-                           unique_amphoes=unique_amphoes,
-                           location_hierarchy=location_hierarchy)
+            stations=stations,
+            unique_rivers=unique_rivers,
+            unique_provinces=unique_provinces,
+            unique_tambons=unique_tambons,
+            unique_amphoes=unique_amphoes,
+            location_hierarchy=location_hierarchy)
     except Exception as e:
         return f"Error loading page: {str(e)}", 500
 
 # หน้าแสดงแผนที่และข่าว
-@app.route('/map/<station_code>') # ดึงข้อมูลสถานี, น้ำ, ดิน แล้วส่งให้ mapandnews.html
+@app.route('/map/<station_code>')
 def map_page(station_code):
-    # 1. ดึงข้อมูลสถานี
     station = get_station_by_code(station_code)
     if not station:
         return "ไม่พบสถานี", 404
-    
-    # 2. ดึงข้อมูลน้ำและดิน
     water_data = get_water_data(station_code)
     soil_data = get_soil_data(station_code)
-    
-    # 3. Debug: พิมพ์ตรวจสอบข้อมูล (ลบออกเมื่อใช้งานจริง)
-    print(f"DEBUG map_page: station={station['station'] if station else None}")
-    print(f"DEBUG map_page: water_data keys={water_data.keys() if water_data else None}")
-    print(f"DEBUG map_page: soil_data keys={soil_data.keys() if soil_data else None}")
-    
-    # 4. ส่งข้อมูลไป template
     return render_template(
         'mapandnews.html',
-        station=station,      # ส่ง object ทั้งก้อน
+        station=station,
         water_data=water_data,
         soil_data=soil_data
     )
 
 # === API: Get All Monitoring Data for Map ===
-@app.route('/api/map-data') # ดึงข้อมูลน้ำและดินทั้งหมดจัดรูปแบบสำหรับแสดงแผนที่ดึงข้อมูลน้ำและดินทั้งหมดจัดรูปแบบสำหรับแสดงแผนที่
+@app.route('/api/map-data')
 def api_map_data():
     """ส่งข้อมูลน้ำและดินทั้งหมดในรูปแบบ JSON สำหรับแผนที่"""
     try:
         conn = get_db()
         cur = conn.cursor()
-        
-        # ดึง check_numbers ทั้งหมด (เรียงลำดับ)
         cur.execute("""
-            SELECT DISTINCT check_number 
-            FROM water_data 
-            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+        SELECT DISTINCT check_number
+        FROM water_data
+        ORDER BY NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
         """)
         water_checks = [row['check_number'] for row in cur.fetchall()]
-        
         cur.execute("""
-            SELECT DISTINCT check_number 
-            FROM soil_data 
-            ORDER BY NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+        SELECT DISTINCT check_number
+        FROM soil_data
+        ORDER BY NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
         """)
         soil_checks = [row['check_number'] for row in cur.fetchall()]
-        
-        # ดึงพารามิเตอร์
         cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
         water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
-        
         cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
         soil_params = [row['parameter'] for row in cur.fetchall()]
-        
-        # ดึงข้อมูลน้ำ: {parameter: {station: [values]}}
         water_data = {}
         for param in water_params:
             water_data[param] = {}
             cur.execute("""
-                SELECT station, check_number, numeric_value 
-                FROM water_data 
-                WHERE parameter = %s AND numeric_value IS NOT NULL
-                ORDER BY station, NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+            SELECT station, check_number, numeric_value
+            FROM water_data
+            WHERE parameter = %s AND numeric_value IS NOT NULL
+            ORDER BY station, NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
             """, (param,))
             rows = cur.fetchall()
             for row in rows:
@@ -882,16 +881,14 @@ def api_map_data():
                     water_data[param][st][idx] = val
                 except ValueError:
                     pass
-        
-        # ดึงข้อมูลดิน
         soil_data = {}
         for param in soil_params:
             soil_data[param] = {}
             cur.execute("""
-                SELECT station, check_number, numeric_value 
-                FROM soil_data 
-                WHERE parameter = %s AND numeric_value IS NOT NULL
-                ORDER BY station, NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
+            SELECT station, check_number, numeric_value
+            FROM soil_data
+            WHERE parameter = %s AND numeric_value IS NOT NULL
+            ORDER BY station, NULLIF(REGEXP_REPLACE(check_number, '\D', '', 'g'), '')::INTEGER NULLS LAST, check_number
             """, (param,))
             rows = cur.fetchall()
             for row in rows:
@@ -904,9 +901,7 @@ def api_map_data():
                     soil_data[param][st][idx] = val
                 except ValueError:
                     pass
-        
         conn.close()
-        
         return jsonify({
             'success': True,
             'water': {
@@ -920,40 +915,33 @@ def api_map_data():
                 'data': soil_data
             }
         })
-        
     except Exception as e:
         print(f"❌ API Error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-    
+
 # === API: Get Latest Data for Map Chart ===
-@app.route('/api/map-latest-data') # ดึงค่าล่าสุดของแต่ละสถานี
+@app.route('/api/map-latest-data')
 def api_map_latest_data():
     """ส่งข้อมูลค่าล่าสุดของแต่ละสถานี สำหรับแสดงกราฟ"""
     try:
         conn = get_db()
         cur = conn.cursor()
-        
-        # ดึงพารามิเตอร์น้ำพร้อมหน่วย
         cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
         water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
-        
-        # ดึงพารามิเตอร์ดิน
         cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
         soil_params = [row['parameter'] for row in cur.fetchall()]
-        
-        # ดึงค่าล่าสุดของน้ำ (ใช้ DISTINCT ON + ORDER BY เพื่อเอาแถวสุดท้าย)
         water_latest = {}
         for param in water_params:
             cur.execute("""
-                SELECT DISTINCT ON (station) 
-                    station, check_number, numeric_value, value
-                FROM water_data 
-                WHERE parameter = %s AND numeric_value IS NOT NULL
-                ORDER BY station, 
-                         NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
-                         check_number DESC
+            SELECT DISTINCT ON (station)
+                station, check_number, numeric_value, value
+            FROM water_data
+            WHERE parameter = %s AND numeric_value IS NOT NULL
+            ORDER BY station,
+                NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
+                check_number DESC
             """, (param,))
             rows = cur.fetchall()
             water_latest[param] = {}
@@ -964,18 +952,16 @@ def api_map_latest_data():
                         'raw_value': row['value'],
                         'check_number': row['check_number']
                     }
-        
-        # ดึงค่าล่าสุดของดิน
         soil_latest = {}
         for param in soil_params:
             cur.execute("""
-                SELECT DISTINCT ON (station) 
-                    station, check_number, numeric_value, value
-                FROM soil_data 
-                WHERE parameter = %s AND numeric_value IS NOT NULL
-                ORDER BY station, 
-                         NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
-                         check_number DESC
+            SELECT DISTINCT ON (station)
+                station, check_number, numeric_value, value
+            FROM soil_data
+            WHERE parameter = %s AND numeric_value IS NOT NULL
+            ORDER BY station,
+                NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER DESC NULLS LAST,
+                check_number DESC
             """, (param,))
             rows = cur.fetchall()
             soil_latest[param] = {}
@@ -986,9 +972,7 @@ def api_map_latest_data():
                         'raw_value': row['value'],
                         'check_number': row['check_number']
                     }
-        
         conn.close()
-        
         response = {
             'success': True,
             'water': {
@@ -1001,68 +985,110 @@ def api_map_latest_data():
             },
             'timestamp': datetime.now().isoformat()
         }
-        
         return jsonify(response)
-        
     except Exception as e:
         print(f"❌ API Latest Error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-    
-@app.route('/api/latest-by-tambon') # ดึงข้อมูลล่าสุดจัดกลุ่มตาม "ตำบล" พร้อมรายการรอบตรวจวัดทั้งหมด
+
+@app.route('/api/station-history')
+def api_station_history():
+    """ดึงข้อมูลย้อนหลังของแต่ละสถานี"""
+    try:
+        station_id = request.args.get('station')
+        param_key = request.args.get('param')
+        data_type = request.args.get('type', 'water')
+        
+        print(f"🔍 API Request: station={station_id}, param={param_key}, type={data_type}")
+        
+        if not station_id or not param_key:
+            return jsonify({'success': False, 'error': 'กรุณาระบุสถานีและพารามิเตอร์'}), 400
+        
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # ✅ ใช้ตารางที่ถูกต้องตาม type
+        if data_type == 'water':
+            cur.execute("""
+                SELECT check_number, numeric_value
+                FROM water_data
+                WHERE station = %s AND parameter = %s AND numeric_value IS NOT NULL
+                ORDER BY NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER ASC
+            """, (station_id, param_key))
+        else:  # soil
+            cur.execute("""
+                SELECT check_number, numeric_value
+                FROM soil_data
+                WHERE station = %s AND parameter = %s AND numeric_value IS NOT NULL
+                ORDER BY NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER ASC
+            """, (station_id, param_key))
+        
+        rows = cur.fetchall()
+        conn.close()
+        
+        # ✅ แปลงข้อมูลให้เป็นรูปแบบเดียวกัน (ทั้งน้ำและดิน)
+        check_numbers = [row['check_number'] for row in rows]
+        values = [float(row['numeric_value']) if row['numeric_value'] is not None else None for row in rows]
+        
+        print(f"📊 Found {len(rows)} records")
+        print(f"📊 Check numbers: {check_numbers}")
+        print(f"📊 Values: {values}")
+        
+        return jsonify({
+            'success': True,
+            'station': station_id,
+            'parameter': param_key,
+            'type': data_type,  # ✅ เพิ่ม type เพื่อ frontend รู้ว่าเป็นน้ำหรือดิน
+            'check_numbers': check_numbers,
+            'values': values
+        })
+        
+    except Exception as e:
+        print(f"❌ API Station History Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# === API: Get Latest Data by Tambon ===
+@app.route('/api/latest-by-tambon')
 def api_latest_by_tambon():
     """ดึงข้อมูลล่าสุดจัดกลุ่มตามตำบล + รายการรอบตรวจวัดทั้งหมด"""
     try:
         conn = get_db()
         cur = conn.cursor()
-        
-        # ดึงข้อมูลสถานีพร้อมตำบล
         cur.execute("""
-            SELECT station, tambon, amphoe, province, river, location
-            FROM station_data
-            ORDER BY tambon, station
+        SELECT station, tambon, amphoe, province, river, location
+        FROM station_data
+        ORDER BY tambon, station
         """)
         stations = cur.fetchall()
-        
-        # ดึงพารามิเตอร์น้ำ
         cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
         water_params = {row['parameter']: row['unit'] for row in cur.fetchall()}
-        
-        # ดึงพารามิเตอร์ดิน
         cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
         soil_params = [row['parameter'] for row in cur.fetchall()]
-        
-        # 1. ดึง check_numbers ทั้งหมดของน้ำ (เรียงจากใหม่ไปเก่า)
         cur.execute("""
         SELECT check_number
         FROM (
             SELECT DISTINCT check_number,
-                    NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER as sort_key
+                NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER as sort_key
             FROM water_data
         ) AS temp
         ORDER BY sort_key DESC NULLS LAST, check_number DESC
         """)
         water_checks = [row['check_number'] for row in cur.fetchall()]
-        
-        # 2. ดึง check_numbers ทั้งหมดของดิน (เรียงจากใหม่ไปเก่า)
-        # ดึง check_numbers ทั้งหมดของดิน
         cur.execute("""
         SELECT check_number
         FROM (
             SELECT DISTINCT check_number,
-                    NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER as sort_key
+                NULLIF(REGEXP_REPLACE(check_number, '[^0-9]', '', 'g'), '')::INTEGER as sort_key
             FROM soil_data
         ) AS temp
         ORDER BY sort_key DESC NULLS LAST, check_number DESC
         """)
         soil_checks = [row['check_number'] for row in cur.fetchall()]
-        
-        # 3. หารอบตรวจวัดล่าสุดของน้ำและดิน
         water_latest_check = water_checks[0] if water_checks else None
         soil_latest_check = soil_checks[0] if soil_checks else None
-        
-        # 4. กรณีไม่มีข้อมูลเลย
         if not water_latest_check and not soil_latest_check:
             tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
             conn.close()
@@ -1075,25 +1101,23 @@ def api_latest_by_tambon():
                 'water': {
                     'parameters': water_params,
                     'latest': {},
-                    'check_numbers': []  # ✅ ส่งรายการว่าง
+                    'check_numbers': []
                 },
                 'soil': {
                     'parameters': soil_params,
                     'latest': {},
-                    'check_numbers': []  # ✅ ส่งรายการว่าง
+                    'check_numbers': []
                 }
             })
-        
-        # 5. ดึงข้อมูลน้ำเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
         water_latest = {}
         if water_latest_check:
             for param in water_params:
                 water_latest[param] = {}
                 cur.execute("""
-                    SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
-                    FROM water_data wd
-                    JOIN station_data sd ON wd.station = sd.station
-                    WHERE wd.parameter = %s AND wd.check_number = %s AND wd.numeric_value IS NOT NULL
+                SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
+                FROM water_data wd
+                JOIN station_data sd ON wd.station = sd.station
+                WHERE wd.parameter = %s AND wd.check_number = %s AND wd.numeric_value IS NOT NULL
                 """, (param, water_latest_check))
                 for row in cur.fetchall():
                     tambon = row['tambon'] or 'ไม่ระบุ'
@@ -1119,17 +1143,15 @@ def api_latest_by_tambon():
                         'prefix': prefix,
                         'check_number': row['check_number']
                     })
-        
-        # 6. ดึงข้อมูลดินเฉพาะรอบล่าสุด (สำหรับแสดงเริ่มต้น)
         soil_latest = {}
         if soil_latest_check:
             for param in soil_params:
                 soil_latest[param] = {}
                 cur.execute("""
-                    SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
-                    FROM soil_data sd
-                    JOIN station_data st ON sd.station = st.station
-                    WHERE sd.parameter = %s AND sd.check_number = %s AND sd.numeric_value IS NOT NULL
+                SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
+                FROM soil_data sd
+                JOIN station_data st ON sd.station = st.station
+                WHERE sd.parameter = %s AND sd.check_number = %s AND sd.numeric_value IS NOT NULL
                 """, (param, soil_latest_check))
                 for row in cur.fetchall():
                     tambon = row['tambon'] or 'ไม่ระบุ'
@@ -1155,10 +1177,8 @@ def api_latest_by_tambon():
                         'prefix': prefix,
                         'check_number': row['check_number']
                     })
-        
         tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
         conn.close()
-        
         return jsonify({
             'success': True,
             'water_latest_check': water_latest_check,
@@ -1168,65 +1188,55 @@ def api_latest_by_tambon():
             'water': {
                 'parameters': water_params,
                 'latest': water_latest,
-                'check_numbers': water_checks  # เพิ่ม: รายการรอบตรวจวัดของน้ำ
+                'check_numbers': water_checks
             },
             'soil': {
                 'parameters': soil_params,
                 'latest': soil_latest,
-                'check_numbers': soil_checks  # เพิ่ม: รายการรอบตรวจวัดของดิน
+                'check_numbers': soil_checks
             }
         })
-        
     except Exception as e:
         print(f"❌ API Tambon Error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/data-by-check') # ดึงข้อมูลตาม "รอบตรวจวัด" ที่เลือก (เช่น ครั้งที่ 1, ครั้งที่ 2)
+# === API: Get Data by Check Number ===
+@app.route('/api/data-by-check')
 def api_data_by_check():
     """ดึงข้อมูลตามรอบตรวจวัดที่ระบุ"""
     try:
         check_number = request.args.get('check_number')
-        data_type = request.args.get('type', 'water')  # 'water' หรือ 'soil'
-        
+        data_type = request.args.get('type', 'water')
         if not check_number:
             return jsonify({'success': False, 'error': 'กรุณาระบุรอบตรวจวัด'}), 400
-        
         conn = get_db()
         cur = conn.cursor()
-        
-        # ดึงข้อมูลสถานีพร้อมตำบล
         cur.execute("""
-            SELECT station, tambon, amphoe, province, river, location
-            FROM station_data
-            ORDER BY tambon, station
+        SELECT station, tambon, amphoe, province, river, location
+        FROM station_data
+        ORDER BY tambon, station
         """)
         stations = cur.fetchall()
-        
         if data_type == 'water':
-            # ดึงพารามิเตอร์น้ำ
             cur.execute("SELECT DISTINCT parameter, unit FROM water_data ORDER BY parameter")
             params = {row['parameter']: row['unit'] for row in cur.fetchall()}
-            
-            # ดึงข้อมูลน้ำตามรอบตรวจวัด
             data_by_param = {}
             for param in params:
                 data_by_param[param] = {}
                 cur.execute("""
-                    SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
-                    FROM water_data wd
-                    JOIN station_data sd ON wd.station = sd.station
-                    WHERE wd.parameter = %s
-                    AND wd.check_number = %s
-                    AND wd.numeric_value IS NOT NULL
+                SELECT wd.station, sd.tambon, wd.numeric_value, wd.value, wd.check_number
+                FROM water_data wd
+                JOIN station_data sd ON wd.station = sd.station
+                WHERE wd.parameter = %s
+                AND wd.check_number = %s
+                AND wd.numeric_value IS NOT NULL
                 """, (param, check_number))
-                
                 for row in cur.fetchall():
                     tambon = row['tambon'] or 'ไม่ระบุ'
                     if tambon not in data_by_param[param]:
                         data_by_param[param][tambon] = []
-                    
                     raw_val = row['value'] or ''
                     numeric_val = row['numeric_value']
                     prefix = ''
@@ -1240,7 +1250,6 @@ def api_data_by_check():
                         if numeric_val is None:
                             try: numeric_val = float(raw_val.replace('>', '').strip())
                             except: numeric_val = 0.0
-                    
                     data_by_param[param][tambon].append({
                         'station': row['station'],
                         'value': float(numeric_val) if numeric_val is not None else None,
@@ -1249,28 +1258,23 @@ def api_data_by_check():
                         'check_number': row['check_number']
                     })
         else:
-            # ดึงพารามิเตอร์ดิน
             cur.execute("SELECT DISTINCT parameter FROM soil_data ORDER BY parameter")
             params = [row['parameter'] for row in cur.fetchall()]
-            
-            # ดึงข้อมูลดินตามรอบตรวจวัด
             data_by_param = {}
             for param in params:
                 data_by_param[param] = {}
                 cur.execute("""
-                    SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
-                    FROM soil_data sd
-                    JOIN station_data st ON sd.station = st.station
-                    WHERE sd.parameter = %s
-                    AND sd.check_number = %s
-                    AND sd.numeric_value IS NOT NULL
+                SELECT sd.station, st.tambon, sd.numeric_value, sd.value, sd.check_number
+                FROM soil_data sd
+                JOIN station_data st ON sd.station = st.station
+                WHERE sd.parameter = %s
+                AND sd.check_number = %s
+                AND sd.numeric_value IS NOT NULL
                 """, (param, check_number))
-                
                 for row in cur.fetchall():
                     tambon = row['tambon'] or 'ไม่ระบุ'
                     if tambon not in data_by_param[param]:
                         data_by_param[param][tambon] = []
-                    
                     raw_val = row['value'] or ''
                     numeric_val = row['numeric_value']
                     prefix = ''
@@ -1284,7 +1288,6 @@ def api_data_by_check():
                         if numeric_val is None:
                             try: numeric_val = float(raw_val.replace('>', '').strip())
                             except: numeric_val = 0.0
-                    
                     data_by_param[param][tambon].append({
                         'station': row['station'],
                         'value': float(numeric_val) if numeric_val is not None else None,
@@ -1292,10 +1295,8 @@ def api_data_by_check():
                         'prefix': prefix,
                         'check_number': row['check_number']
                     })
-        
         tambons = sorted(list(set(s['tambon'] for s in stations if s['tambon'])))
         conn.close()
-        
         return jsonify({
             'success': True,
             'check_number': check_number,
@@ -1305,164 +1306,175 @@ def api_data_by_check():
             'data': data_by_param,
             'parameters': params
         })
-        
     except Exception as e:
         print(f"❌ API Data By Check Error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-_last_news = {}  # ใช้ dict แทน เพื่อแคชแยกตามแหล่ง
-CACHE_DURATION = 1800  # 30 นาที
-
-@app.route('/api/ryt9-news', methods=['GET']) # ระบบดึงข่าวอัตโนมัติ
-def get_ryt9_news():
-    """ดึงข่าวจากทุกแหล่งในฐานข้อมูล"""
-    now = time.time()
-    
-    # ดึงแหล่งข่าวจาก Database (มี cache)
-    if (_last_news_sources['data'] and
-        (now - _last_news_sources['timestamp']) < SOURCES_CACHE_DURATION):
-        NEWS_SOURCES = _last_news_sources['data']
-        print("✅ Using cached news sources")
-    else: #  ดึงรายการแหล่งข่าวจากฐานข้อมูล 
-        NEWS_SOURCES = get_news_sources()
-        _last_news_sources['data'] = NEWS_SOURCES
-        _last_news_sources['timestamp'] = time.time()
-        print(f"✅ Fetched {len(NEWS_SOURCES)} news sources from database")
-    
-    if not NEWS_SOURCES:
-        return jsonify({
-            'success': False,
-            'error': 'ไม่พบแหล่งข่าวในระบบ'
-        }), 500
-    
-    # ใช้แคชข่าวถ้ายังไม่หมดอายุ
-    cache_key = 'all_sources'
-    if (_last_news.get(cache_key) and
-        (now - _last_news.get(f'{cache_key}_time', 0)) < CACHE_DURATION):
-        print("✅ Using cached news data")
-        return jsonify({
-            'success': True,
-            'data': _last_news[cache_key],
-            'count': len(_last_news[cache_key]),
-            'cached': True
-        })
-    
-    all_news = []
-    news_id = 1
-    
+@app.route('/api/stations-list')
+def get_stations_list():
     try:
-        # ดึงข่าวจากทุกแหล่งใน Database
-        for source_key, source_info in NEWS_SOURCES.items():
-            target_url = source_info['url']
-            source_name = source_info['name']
-            source_icon = source_info['icon']
-            
-            print(f"🔄 Fetching from {source_name}: {target_url}")
-            
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            
-            try:
-                response = requests.get(target_url, headers=headers, timeout=15)
-                response.encoding = 'utf-8'
-                
-                if response.status_code != 200:
-                    print(f"⚠️ Failed to fetch {source_name}: HTTP {response.status_code}")
-                    continue
-                
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                # 🔍 ดึงรูปภาพข่าว
-                image_url = None
-                og_image = soup.find('meta', property='og:image')
-                if og_image and og_image.get('content'):
-                    image_url = og_image['content']
-                
-                if not image_url:
-                    twitter_image = soup.find('meta', attrs={'name': 'twitter:image'})
-                    if twitter_image and twitter_image.get('content'):
-                        image_url = twitter_image['content']
-                
-                if not image_url:
-                    img_tag = soup.find('img', class_=lambda x: x and ('image' in x.lower() or 'photo' in x.lower()))
-                    if img_tag:
-                        image_url = img_tag.get('src') or img_tag.get('data-src')
-                        if image_url and not image_url.startswith('http'):
-                            image_url = f"https://www.ryt9.com{image_url}"
-                
-                # ค้นหา title
-                title_elem = soup.find('h1') or soup.find('h2') or soup.find('title')
-                title = title_elem.get_text(strip=True) if title_elem else f'ข่าวจาก {source_name}'
-                
-                # ค้นหาเนื้อหา
-                content_elem = soup.find('div', class_='detail') or \
-                              soup.find('div', class_='content') or \
-                              soup.find('article')
-                content = content_elem.get_text(strip=True)[:500] + '...' if content_elem else ''
-                
-                # ค้นหาเวลา
-                time_elem = soup.find('time') or soup.find('span', class_='date')
-                pub_date = time_elem.get_text(strip=True) if time_elem else datetime.now().strftime('%d %b %y')
-                
-                # สร้างรายการข่าว
-                all_news.append({
-                    'id': news_id,
-                    'type': 'normal',
-                    'badge': '🔵 ทั่วไป',
-                    'badgeClass': 'badge-normal',
-                    'title': title,
-                    'excerpt': content[:150] + '...' if len(content) > 150 else content,
-                    'content': f'''
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                    color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                            <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; 
-                                         border-radius: 12px; font-size: 12px;">
-                                {source_icon} {source_name}
-                            </span>
-                        </div>
-                        <div style="text-align:center; margin: 20px 0;">
-                            <a href="{target_url}" target="_blank"
-                               style="display: inline-block; padding: 14px 28px;
-                                      background: linear-gradient(135deg, #1a73e8, #0d47a1);
-                                      color: white; text-decoration: none; border-radius: 8px;
-                                      font-weight: 600;">
-                                📰 อ่านข่าวเต็มรูปแบบ
-                            </a>
-                        </div>
-                    ''',
-                    'date': pub_date,
-                    'source': source_name,
-                    'externalLink': target_url,
-                    'image': image_url,
-                    'sourceKey': source_key
-                })
-                news_id += 1
-                
-            except Exception as e:
-                print(f"⚠️ Error fetching {source_name}: {e}")
-                continue
-        
-        if not all_news:
-            all_news = [{
-                'id': 1, 'type': 'normal', 'badge': '🔵 ทั่วไป', 'badgeClass': 'badge-normal',
-                'title': 'ไม่สามารถดึงข่าวได้ในขณะนี้',
-                'excerpt': 'กรุณาลองใหม่อีกครั้งในภายหลัง',
-                'content': '<p>ไม่สามารถดึงข่าวจากแหล่งที่กำหนดได้</p>',
-                'date': datetime.now().strftime('%d %b %y'),
-                'source': 'ระบบ', 'externalLink': '#', 'image': None
-            }]
-        
-        print(f"✅ Fetched {len(all_news)} news items from {len(NEWS_SOURCES)} sources")
+        conn = get_db()
+        cur  = conn.cursor()
+        # ✅ เพิ่ม lat, lon ใน SELECT
+        cur.execute("""
+            SELECT station, river, tambon, amphoe, province, location, lat, lon
+            FROM station_data
+            ORDER BY river, station
+        """)
+        rows = cur.fetchall()
+        conn.close()
 
+        stations = []
+        for row in rows:
+            river  = row['river']  or ''
+            tambon = row['tambon'] or ''
+            stations.append({
+                'id':       row['station'],
+                'name':     f"แม่น้ำ{river} ({tambon})" if river else row['station'],
+                'river':    river,
+                'tambon':   tambon,
+                'amphoe':   row['amphoe']   or '',
+                'province': row['province'] or '',
+                'lat': float(row['lat']) if row['lat'] is not None else None,  # ✅
+                'lon': float(row['lon']) if row['lon'] is not None else None,  # ✅
+            })
+
+        return jsonify({'success': True, 'stations': stations, 'count': len(stations)})
+
+    except Exception as e:
+        print(f"❌ stations-list error: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+# ✅ เพิ่มตัวแปร Hardcode ข่าว (แทน Database)
+HARDCODED_NEWS = [
+    {
+        'id': 1,
+        'type': 'normal',
+        'badge': '🔵 ทั่วไป',
+        'badgeClass': 'badge-normal',
+        'title': 'กรมอนามัยเผยคุณภาพน้ำแม่น้ำกกอยู่ในเกณฑ์มาตรฐาน',
+        'excerpt': 'สำนักงานสิ่งแวดล้อมภาคที่ 1 เชียงใหม่ รายงานผลการตรวจวัดคุณภาพน้ำในแม่น้ำกกและลำน้ำสาขา...',
+        'content': '<p>สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่) รายงานผลการตรวจวัดคุณภาพน้ำในแม่น้ำกกและลำน้ำสาขา พบว่าค่าสารปนเปื้อนต่างๆ อยู่ในเกณฑ์มาตรฐานที่กำหนด...</p>',
+        'date': '15 มี.ค. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/prg/3596933',
+        'image': 'https://www.ryt9.com/img/files/20250416/00c1d856-0.jpg.webp',
+        'sourceKey': 'ryt9_1'
+    },
+    {
+        'id': 2,
+        'type': 'normal',
+        'badge': '⚠️ สิ่งแวดล้อม',
+        'badgeClass': 'badge-warning',
+        'title': 'ชาวบ้านเชียงรายร่วมเฝ้าระวังคุณภาพน้ำแม่น้ำโขง',
+        'excerpt': 'ชุมชนริมแม่น้ำโขงจังหวัดเชียงราย จัดกิจกรรมติดตามตรวจสอบคุณภาพน้ำร่วมกับหน่วยงานภาครัฐ...',
+        'content': '<p>ชาวบ้านในจังหวัดเชียงรายร่วมกับสำนักงานสิ่งแวดล้อม จัดกิจกรรมติดตามตรวจสอบคุณภาพน้ำแม่น้ำโขง เพื่อสร้างความมั่นใจในการใช้น้ำอุปโภคบริโภค...</p>',
+        'date': '12 มี.ค. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/iq01/12768056',
+        'image': 'https://www.ryt9.com/img/files/20251122/00c2d338-0.jpg.webp',
+        'sourceKey': 'ryt9_2'
+    },
+    {
+        'id': 3,
+        'type': 'normal',
+        'badge': '🏛️ รัฐบาล',
+        'badgeClass': 'badge-info',
+        'title': 'เตือนภัย! ตรวจสอบสารปนเปื้อนในแหล่งน้ำภาคเหนือ',
+        'excerpt': 'กรมทรัพยากรน้ำแจ้งเตือนประชาชนในพื้นที่ภาคเหนือเฝ้าระวังคุณภาพน้ำช่วงฤดูร้อน...',
+        'content': '<p>กรมทรัพยากรน้ำ กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม ออกประกาศเตือนประชาชนในพื้นที่ภาคเหนือให้เฝ้าระวังคุณภาพน้ำในช่วงฤดูร้อน...</p>',
+        'date': '10 มี.ค. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/prg/12721189',
+        'image': 'https://www.ryt9.com/img/files/20250617/00c21c25-0.jpg.webp',
+        'sourceKey': 'ryt9_3'
+    },
+    {
+        'id': 4,
+        'type': 'normal',
+        'badge': '💰 งบประมาณ',
+        'badgeClass': 'badge-primary',
+        'title': 'ผลตรวจตะกอนดินแม่น้ำสายพบค่าปกติ',
+        'excerpt': 'ผลการตรวจวัดตะกอนดินในแม่น้ำสายจังหวัดเชียงราย พบว่าค่าสารโลหะหนักอยู่ในเกณฑ์ปลอดภัย...',
+        'content': '<p>สำนักงานสิ่งแวดล้อมภาคที่ 1 เชียงใหม่ เผยผลการตรวจวัดตะกอนดินในแม่น้ำสาย พบว่าค่าสารโลหะหนักต่างๆ อยู่ในเกณฑ์มาตรฐาน...</p>',
+        'date': '08 มี.ค. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/prg/12731088',
+        'image': 'https://www.ryt9.com/img/files/20250722/00c242d0-0.jpg.webp',
+        'sourceKey': 'ryt9_4'
+    },
+    {
+        'id': 5,
+        'type': 'normal',
+        'badge': '🔵 ทั่วไป',
+        'badgeClass': 'badge-normal',
+        'title': 'เปิดศูนย์เฝ้าระวังคุณภาพน้ำจังหวัดเชียงใหม่',
+        'excerpt': 'จังหวัดเชียงใหม่เปิดศูนย์ติดตามตรวจสอบคุณภาพน้ำแบบเรียลไทม์ เพื่อแจ้งเตือนประชาชน...',
+        'content': '<p>จังหวัดเชียงใหม่ร่วมกับหน่วยงานที่เกี่ยวข้อง เปิดศูนย์ติดตามตรวจสอบคุณภาพน้ำแบบเรียลไทม์ เพื่อแจ้งเตือนประชาชนกรณีพบค่าผิดปกติ...</p>',
+        'date': '05 มี.ค. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/iq01/12729203',
+        'image': 'https://www.ryt9.com/img/files/20250715/00c23b73-0.jpg.webp',
+        'sourceKey': 'ryt9_5'
+    },
+    {
+        'id': 6,
+        'type': 'normal',
+        'badge': '🔵 ทั่วไป',
+        'badgeClass': 'badge-normal',
+        'title': 'แนะนำวิธีตรวจสอบคุณภาพน้ำเบื้องต้นสำหรับประชาชน',
+        'excerpt': 'กรมอนามัยเผยวิธีสังเกตคุณภาพน้ำด้วยตนเองเบื้องต้น เพื่อความปลอดภัยในการอุปโภคบริโภค...',
+        'content': '<p>กรมอนามัย กระทรวงสาธารณสุข แนะนำวิธีสังเกตคุณภาพน้ำด้วยตนเองเบื้องต้น เช่น การดูสี กลิ่น รสชาติ...</p>',
+        'date': '01 มี.ค. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/prg/12748477',
+        'image': 'https://www.ryt9.com/img/files/20250917/00c286bd-0.jpg.webp',
+        'sourceKey': 'ryt9_6'
+    },
+    {
+        'id': 7,
+        'type': 'normal',
+        'badge': '🔵 ทั่วไป',
+        'badgeClass': 'badge-normal',
+        'title': 'สวทช. พัฒนาเทคโนโลยีตรวจสอบคุณภาพน้ำ',
+        'excerpt': 'สวทช. เผยพัฒนาเทคโนโลยีใหม่สำหรับตรวจสอบคุณภาพน้ำแบบเรียลไทม์...',
+        'content': '<p>สำนักงานพัฒนาวิทยาศาสตร์และเทคโนโลยีแห่งชาติ (สวทช.) เผยพัฒนาเทคโนโลยีใหม่สำหรับตรวจสอบคุณภาพน้ำแบบเรียลไทม์...</p>',
+        'date': '28 ก.พ. 68',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/prg/12716763',
+        'image': 'https://www.ryt9.com/img/files/20250529/00c20adb-0.jpg.webp',
+        'sourceKey': 'ryt9_7'
+    },
+    {
+        'id': 8,
+        'type': 'normal',
+        'badge': '🔵 ทั่วไป',
+        'badgeClass': 'badge-normal',
+        'title': 'มาตรการป้องกันมลพิษทางน้ำในพื้นที่ภาคเหนือ',
+        'excerpt': 'รัฐบาลประกาศมาตรการใหม่ในการป้องกันและแก้ไขปัญหามลพิษทางน้ำ...',
+        'content': '<p>รัฐบาลประกาศมาตรการใหม่ในการป้องกันและแก้ไขปัญหามลพิษทางน้ำในพื้นที่ภาคเหนือ โดยเน้นการมีส่วนร่วมของชุมชน...</p>',
+        'source': 'RYT9',
+        'externalLink': 'https://www.ryt9.com/s/prg/3595367',
+        'image': 'https://www.ryt9.com/img/files/20250408/00c1d134-0.jpg.webp',
+        'sourceKey': 'ryt9_8'
+    }
+]
+
+# ✅ แก้ไขฟังก์ชัน get_ryt9_news() ให้ใช้ Hardcode
+@app.route('/api/ryt9-news', methods=['GET'])
+def get_ryt9_news():
+    """ดึงข่าวจาก HARDCODED_NEWS (ไม่ต้องใช้ Database)"""
+    try:
+        print("✅ Using hardcoded news data")
         
         return jsonify({
             'success': True,
-            'data': all_news,
-            'count': len(all_news),
-            'sources': len(NEWS_SOURCES)
+            'data': HARDCODED_NEWS,
+            'count': len(HARDCODED_NEWS),
+            'cached': False
         })
         
     except Exception as e:
@@ -1471,55 +1483,10 @@ def get_ryt9_news():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.errorhandler(Exception)
-def handle_error(error):
-    import traceback
-    error_trace = traceback.format_exc()
-    print(f"ERROR: {error_trace}")  # จะแสดงใน Vercel logs
-    return {
-        'error': str(error),
-        'traceback': error_trace
-    }, 500
-
-# ===== News Sources from Database =====
-def get_news_sources():
-    """ดึงแหล่งข่าวจาก Supabase"""
-    conn = None
-    try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, name, url, icon, is_active
-            FROM news_sources
-            WHERE is_active = true
-            ORDER BY id
-        """)
-        sources = cur.fetchall()
-        conn.close()
-        
-        # แปลงเป็น dictionary
-        news_sources = {}
-        for source in sources:
-            key = f"source_{source['id']}"
-            news_sources[key] = {
-                'name': source['name'],
-                'url': source['url'],
-                'icon': source['icon']
-            }
-        return news_sources
-    except Exception as e:
-        print(f"❌ Error fetching news sources: {e}")
-        return {}  # คืนค่าว่างถ้ามี error
-
-# ===== Cache สำหรับแหล่งข่าว =====
-_last_news_sources = {'data': None, 'timestamp': 0}
-SOURCES_CACHE_DURATION = 3600  # 1 ชั่วโมง
-
 # === Main Entry Point ===
 if __name__ == '__main__':
     # สร้างตารางถ้ายังไม่มี
     init_db()
-    
     port = int(os.environ.get('PORT', 8080))
     print("=" * 50)
     print("🚀 กำลังเริ่มเว็บแอปพลิเคชัน...")
@@ -1527,5 +1494,4 @@ if __name__ == '__main__':
     print(f"📊 ฐานข้อมูล: PostgreSQL (Neon)")
     print(f"🌐 เปิดเบราว์เซอร์ที่: http://localhost:{port}")
     print("=" * 50)
-
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
