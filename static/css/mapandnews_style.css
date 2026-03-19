@@ -85,7 +85,7 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
     margin-bottom: 20px;
-    align-self: flex-start; /* อยู่ซ้ายบนใน container */
+    align-self: flex-end; /* อยู่ซ้ายบนใน container */
     border: 2px solid transparent;
 }
 
@@ -149,7 +149,6 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    background: rgba(255, 255, 255, 0.92);
     padding: 8px 16px;
     border-radius: 30px;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
@@ -161,7 +160,6 @@ body {
 
 .user-info.top-right .logout-btn {
     background: linear-gradient(135deg, #e57373, #d32f2f);
-    color: white;
     padding: 6px 14px;
     border-radius: 20px;
     text-decoration: none;
@@ -1980,5 +1978,43 @@ body {
     .advice-section p,
     .advice-section ul {
         padding-left: 0;
+    }
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between; /* ซ้าย-ขวา */
+    align-items: center;
+}
+
+/* ดันปุ่มไปขวา */
+.auth-section {
+    margin-left: auto;
+}
+
+/* ปุ่ม */
+.login-btn,
+.logout-btn {
+    position: static !important; /* 🔥 ยกเลิก absolute */
+    padding: 8px 18px;
+    font-size: 0.95em;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .auth-section {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .login-btn,
+    .logout-btn {
+        width: 100%;
     }
 }

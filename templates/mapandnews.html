@@ -13,6 +13,15 @@
 </head>
 <body>
 <div class="container">
+  <div class="top-bar">
+    <div class="auth-section">
+    {% if session.logged_in %}
+            <a href="/logout" class="logout-btn" id="logoutBtn" data-logout-url="/logout">ออกจากระบบ</a>
+        {% else %}
+            <a href="/login" class="login-btn top-right">เข้าสู่ระบบ</a>
+        {% endif %}
+      </div>
+    </div>
   
   <!-- ========== Header ========== -->
   <div class="station-header-map">
@@ -22,14 +31,6 @@
     <div class="header-buttons" id="header-buttons">
         </div>
 
-        {% if session.logged_in %}
-         <div class="user-info top-right">
-            สวัสดี, {{ session.username or 'Admin' }}!
-            <a href="/logout" class="logout-btn" id="logoutBtn" data-logout-url="/logout">ออกจากระบบ</a>
-        </div>
-        {% else %}
-            <a href="/login" class="login-btn top-right">เข้าสู่ระบบ</a>
-        {% endif %}
     <div class="tab-buttons">
       <button class="tab-btn active" onclick="switchTab('water')" id="btn-water">💧 น้ำผิวดิน</button>
       <button class="tab-btn" onclick="switchTab('sediment')" id="btn-sediment">🪨 ตะกอนดิน</button>
@@ -1023,6 +1024,13 @@ function showStationList(type) {
             }
             return `
             <div class="station-list-item ${type}"
+                onclick="goToStationDetail('${st.id}')"
+                style="padding: 12px; border-radius: 8px; margin-bottom: 8px;
+                display: flex; align-items: center;
+                background: ${bgColor};
+                border: 1px solid #e0e0e0;
+                transition: all 0.2s ease;
+                cursor: pointer;"
                 style="padding: 12px; border-radius: 8px; margin-bottom: 8px;
                 display: flex; align-items: center;
                 background: ${bgColor};
