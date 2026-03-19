@@ -43,7 +43,7 @@ def get_stations():
         
         # ดึงข้อมูลจากตาราง station_data เรียงลำดับตามชื่อแม่น้ำและชื่อสถานี
         cur.execute("""
-            SELECT id, station, river, tambon, amphoe, province, location
+            SELECT id, station, river, tambon, amphoe, province, location, lat, lon
             FROM station_data
             ORDER BY river, station
         """)
@@ -58,120 +58,121 @@ def get_stations():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-# === POST /api/stations - เพิ่มสถานีใหม่ (รองรับ JSON จาก Frontend) ===
 @api_bp.route('/stations', methods=['POST'])
 def add_station_api():
     try:
         from app import get_db
-        data = request.get_json() # รับข้อมูล: request.get_json() ดึงข้อมูล JSON ที่ส่งมา
+        data = request.get_json()
         
         if not data:
             return jsonify({'success': False, 'error': 'No JSON data received'}), 400
         
-        # === 1. ดึงข้อมูลพื้นฐาน ===
-        station = data.get('station', '').strip()
-        river = data.get('river', '').strip()
-        tambon = data.get('tambon', '').strip()
-        amphoe = data.get('amphoe', '').strip()
-        province = data.get('province', '').strip()
-        location = data.get('location', '').strip()
-        
+        station  = str(data.get('station',  '') or '').strip()
+        river    = str(data.get('river',    '') or '').strip()
+        tambon   = str(data.get('tambon',   '') or '').strip()
+        amphoe   = str(data.get('amphoe',   '') or '').strip()
+        province = str(data.get('province', '') or '').strip()
+        location = str(data.get('location', '') or '').strip()
+
+        # ✅ รับและแปลง lat/lon
+        lat_raw = data.get('lat')
+        lon_raw = data.get('lon')
+        try:
+            lat = float(str(lat_raw).strip()) if lat_raw not in [None, '', 'null'] else None
+        except (TypeError, ValueError):
+            lat = None
+        try:
+            lon = float(str(lon_raw).strip()) if lon_raw not in [None, '', 'null'] else None
+        except (TypeError, ValueError):
+            lon = None
+
+        print(f"📥 Blueprint: station={station}, lat={lat}, lon={lon}")
+
         if not station:
             return jsonify({'success': False, 'error': 'station is required'}), 400
         
         conn = get_db()
         cur = conn.cursor()
         
-        # === 2. บันทึกสถานี ===
+        # ✅ INSERT พร้อม lat, lon
         cur.execute("""
-            INSERT INTO station_data (station, river, tambon, amphoe, province, location)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO station_data
+                (station, river, tambon, amphoe, province, location, lat, lon)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (station) DO UPDATE SET
-                river = EXCLUDED.river,
-                tambon = EXCLUDED.tambon,
-                amphoe = EXCLUDED.amphoe,
+                river    = EXCLUDED.river,
+                tambon   = EXCLUDED.tambon,
+                amphoe   = EXCLUDED.amphoe,
                 province = EXCLUDED.province,
-                location = EXCLUDED.location
-        """, (station, river, tambon, amphoe, province, location))
-        print(f"✅ Saved station: {station}")
-        
-        # === 3. บันทึกข้อมูลน้ำ ===
+                location = EXCLUDED.location,
+                lat      = EXCLUDED.lat,
+                lon      = EXCLUDED.lon
+        """, (station, river, tambon, amphoe, province, location, lat, lon))
+
+        # บันทึกข้อมูลน้ำ
         water_count = 0
-        water_data = data.get('waterData', [])
-        
-        for item in water_data:
-            param = item.get('parameter', '').strip()
-            unit = item.get('unit', '').strip()
+        for item in data.get('waterData', []):
+            param = str(item.get('parameter', '') or '').strip()
+            unit  = str(item.get('unit', '')      or '').strip()
             if not param:
                 continue
-                
-            for i in range(1, 15):  # 14 ครั้ง
-                check_key = f'check{i}'
-                value = item.get(check_key, '').strip() if item.get(check_key) else ''
+            for i in range(1, 16):  # ✅ 15 ครั้ง
+                value = str(item.get(f'check{i}', '') or '').strip()
                 if not value:
                     continue
-                    
                 numeric_value = None
-                if value and value not in ['-', 'ND', '']:
+                if value not in ['-', 'ND']:
                     try:
                         numeric_value = 0.0 if value.startswith('<') else float(value)
                     except ValueError:
                         pass
-                
                 cur.execute("""
-                    INSERT INTO water_data (station, parameter, unit, location, check_number, value, numeric_value)
+                    INSERT INTO water_data
+                        (station, parameter, unit, location, check_number, value, numeric_value)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (station, param, unit, location, f'ครั้งที่ {i}', value, numeric_value))
                 water_count += 1
-        
-        print(f"✅ Saved {water_count} water data records")
-        
-        # === 4. บันทึกข้อมูลดิน ===
+
+        # บันทึกข้อมูลดิน
         soil_count = 0
-        soil_data = data.get('soilData', [])
-        
-        for item in soil_data:
-            param = item.get('parameter', '').strip()
+        for item in data.get('soilData', []):
+            param = str(item.get('parameter', '') or '').strip()
             if not param:
                 continue
-                
-            for i in range(1, 9):  # 8 ครั้ง
-                check_key = f'check{i}'
-                value = item.get(check_key, '').strip() if item.get(check_key) else ''
+            for i in range(1, 10):  # ✅ 9 ครั้ง
+                value = str(item.get(f'check{i}', '') or '').strip()
                 if not value:
                     continue
-                    
                 numeric_value = None
-                if value and value not in ['-', 'ND', '']:
+                if value not in ['-', 'ND']:
                     try:
                         numeric_value = 0.0 if value.startswith('<') else float(value)
                     except ValueError:
                         pass
-                
                 cur.execute("""
-                    INSERT INTO soil_data (station, parameter, location, check_number, value, numeric_value)
+                    INSERT INTO soil_data
+                        (station, parameter, location, check_number, value, numeric_value)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (station, param, location, f'ครั้งที่ {i}', value, numeric_value))
                 soil_count += 1
-        
-        print(f"✅ Saved {soil_count} soil data records")
-        
+
         conn.commit()
         conn.close()
-        
+
+        print(f"✅ บันทึกสำเร็จ: {station} lat={lat} lon={lon}")
         return jsonify({
             'success': True,
-            'message': 'Station, water data, and soil data saved successfully',
+            'message': 'บันทึกสำเร็จ',
             'station': station,
+            'lat': lat,
+            'lon': lon,
             'water_count': water_count,
             'soil_count': soil_count
         }), 201
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # === GET /api/stations/<station_code> - ดึงข้อมูลสถานีเดียว ===
 @api_bp.route('/stations/<station_code>', methods=['GET'])
@@ -183,7 +184,7 @@ def get_station_detail(station_code):
         
         # ดึงข้อมูลสถานี
         cur.execute("""
-            SELECT id, station, river, tambon, amphoe, province, location
+            SELECT id, station, river, tambon, amphoe, province, location, lat, lon
             FROM station_data
             WHERE station = %s
         """, (station_code.strip(),))
@@ -271,6 +272,18 @@ def update_station_api(station_code): # แก้ไขข้อมูลพื�
         province = data.get('province', '').strip()
         location = data.get('location', '').strip()
         
+        # ✅ แก้ — เพิ่ม lat, lon
+        lat_raw = data.get('lat')
+        lon_raw = data.get('lon')
+        try:
+            lat = float(str(lat_raw).strip()) if lat_raw not in [None, '', 'null'] else None
+        except (TypeError, ValueError):
+            lat = None
+        try:
+            lon = float(str(lon_raw).strip()) if lon_raw not in [None, '', 'null'] else None
+        except (TypeError, ValueError):
+            lon = None
+            
         conn = get_db()
         cur = conn.cursor()
         
@@ -278,10 +291,10 @@ def update_station_api(station_code): # แก้ไขข้อมูลพื�
         cur.execute("""
             UPDATE station_data
             SET station = %s, river = %s, tambon = %s, amphoe = %s, 
-                province = %s, location = %s
+                province = %s, location = %s, lat = %s, lon = %s
             WHERE station = %s
             RETURNING id
-        """, (station, river, tambon, amphoe, province, location, station_code))
+        """, (station, river, tambon, amphoe, province, location, lat, lon, station_code))
         
         result = cur.fetchone()
         if not result:
