@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="container">
-        <a href="/stations" class="back-button">ย้อนกลับ</a>
+        <a href="/" class="back-button">ย้อนกลับ</a>
         <div class="form-header">
             <h1>เพิ่มข้อมูลรายการสถานีตรวจสอบ</h1>
             <p>กรุณากรอกข้อมูลให้ครบถ้วน</p>
@@ -40,6 +40,22 @@
                         <label for="province">จังหวัด <span>*</span></label>
                         <input type="text" id="province" name="province" required>
                     </div>
+                    <!-- แก้ทั้ง 2 ช่อง -->
+                    <div class="form-group">
+                        <label for="lat">ละติจูด (Lat) <span>*</span></label>
+                        <input type="text" id="lat" name="lat"
+                            placeholder="เช่น 20.0902747" required
+                            pattern="^-?\d+(\.\d+)?$"
+                            title="กรอกตัวเลขทศนิยม เช่น 20.0902747">
+                    </div>
+                    <div class="form-group">
+                        <label for="lon">ลองจิจูด (Lon) <span>*</span></label>
+                        <input type="text" id="lon" name="lon"
+                            placeholder="เช่น 99.3534244" required
+                            pattern="^-?\d+(\.\d+)?$"
+                            title="กรอกตัวเลขทศนิยม เช่น 99.3534244">
+                    </div>
+                   
                     <div class="form-group full-width">
                         <label for="location">ที่ตั้ง <span>*</span></label>
                         <textarea id="location" name="location" rows="3" required></textarea>
@@ -303,85 +319,89 @@
             soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, false));
         });
 
-        // จัดการ Submit Form - แสดง Modal Success แทน alert()
-        document.getElementById('stationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const originalText = submitBtn.textContent;
-            //เตรียมสถานะปุ่ม (Loading)
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'กำลังบันทึก...';
-            // รวบรวมข้อมูลพื้นฐาน
-            const basicData = {
-                station: document.getElementById('station').value,
-                river: document.getElementById('river').value,
-                tambon: document.getElementById('tambon').value,
-                amphoe: document.getElementById('amphoe').value,
-                province: document.getElementById('province').value,
-                location: document.getElementById('location').value,
+        // จัดการ Submit Form - บันทึกแล้วไปหน้าแผนที่เพื่ออัปเดตสรุป
+document.getElementById('stationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'กำลังบันทึก...';
+    
+    // รวบรวมข้อมูลพื้นฐาน
+    const basicData = {
+        station: document.getElementById('station').value,
+        river: document.getElementById('river').value,
+        tambon: document.getElementById('tambon').value,
+        amphoe: document.getElementById('amphoe').value,
+        province: document.getElementById('province').value,
+        location: document.getElementById('location').value,
+        lat: document.getElementById('lat').value,
+        lon: document.getElementById('lon').value
+    };
+
+    // รวบรวมข้อมูลน้ำ
+    const waterData = [];
+    for (let row of waterTbody.rows) {
+        const param = row.querySelector('.param-input').value;
+        if(param) {
+            const item = {
+                parameter: param,
+                unit: row.querySelector('.unit-input').value
             };
+            for(let i=1; i<=WATER_CHECK_COUNT; i++) {
+                item[`check${i}`] = row.querySelector(`.check-input-${i}`).value;
+            }
+            waterData.push(item);
+        }
+    }
 
-            // รวบรวมข้อมูลน้ำ (วนลูปอ่านค่าจากตาราง)
-            const waterData = [];
-            for (let row of waterTbody.rows) {
-                const param = row.querySelector('.param-input').value;
-                // ดึงค่า param, unit, check1-check15 ...
-                if(param) {
-                    const item = {
-                        parameter: param,
-                        unit: row.querySelector('.unit-input').value
-                    };
-                    for(let i=1; i<=WATER_CHECK_COUNT; i++) {
-                        item[`check${i}`] = row.querySelector(`.check-input-${i}`).value;
-                    }
-                    waterData.push(item);
-                }
+    // รวบรวมข้อมูลดิน
+    const soilData = [];
+    for (let row of soilTbody.rows) {
+        const param = row.querySelector('.param-input').value;
+        if(param) {
+            const item = { parameter: param };
+            for(let i=1; i<=SOIL_CHECK_COUNT; i++) {
+                item[`check${i}`] = row.querySelector(`.check-input-${i}`).value;
             }
-
-            // รวบรวมข้อมูลดิน
-            const soilData = [];
-            for (let row of soilTbody.rows) {
-                const param = row.querySelector('.param-input').value;
-                if(param) {
-                    const item = { parameter: param };
-                    for(let i=1; i<=SOIL_CHECK_COUNT; i++) {
-                        item[`check${i}`] = row.querySelector(`.check-input-${i}`).value;
-                    }
-                    soilData.push(item);
-                }
-            }
-            // ส่งข้อมูลไป Backend ด้วย Fetch API
-            try {
-                const response = await fetch('/api/stations', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...basicData,
-                        waterData: waterData,
-                        soilData: soilData
-                    })
-                });
-                const result = await response.json();
-                // จัดการผลลัพธ์
-                if (result.success) {
-                    // แสดง Modal Success แทน alert()
-                    showModal('successModal', () => {
-                        // หลังจากกดตกลง → ล้างฟอร์ม
-                        document.getElementById('stationForm').reset();
-                        resetTables();  // รีเซ็ตตารางกลับเป็น 1 แถวว่าง
-                    });
-                } else {
-                    alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
-            } finally {
-                // คืนสถานะปุ่ม
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-            }
+            soilData.push(item);
+        }
+    }
+    
+    // ส่งข้อมูลไป Backend
+    try {
+        const response = await fetch('/api/stations', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...basicData,
+                waterData: waterData,
+                soilData: soilData
+            })
         });
+        const result = await response.json();
+        
+        if (result.success) {
+            // ✅ แสดงข้อความสั้นๆ แล้วรีไดเรกต์ไปหน้าแผนที่ทันที
+            submitBtn.textContent = '✅ บันทึกสำเร็จ! กำลังไปหน้าแผนที่...';
+            
+            // ✅ รีไดเรกต์ไปหน้าหลัก (แผนที่) เพื่ออัปเดตข้อมูลสรุปจำนวนสถานี
+            setTimeout(() => {
+                window.location.href = '/';  // ✅ ไปหน้า Map & News
+            }, 1500);
+            
+        } else {
+            alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
 
         // จัดการปุ่มล้างข้อมูล - แสดง Modal Confirm
         resetBtn.addEventListener('click', function() {
