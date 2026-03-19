@@ -40,6 +40,19 @@
                         <label>จังหวัด <span>*</span></label>
                         <input type="text" name="province" value="{{ station.province }}" required>
                     </div>
+                    <!-- ✅ เพิ่มฟิลด์ละติจูด/ลองจิจูด -->
+                    <div class="form-group">
+                        <label>ละติจูด</label>
+                        <input type="number" name="latitude" step="any" 
+                            value="{{ station_lat if station_lat else '' }}" 
+                            placeholder="เช่น 19.922619">
+                    </div>
+                    <div class="form-group">
+                        <label>ลองจิจูด</label>
+                        <input type="number" name="longitude" step="any"
+                        value="{{ station_lon if station_lon else '' }}"
+                        placeholder="เช่น 99.818520">
+                    </div>
                     <div class="form-group full-width">
                         <label>ที่ตั้ง <span>*</span></label>
                         <textarea name="location" rows="3" required>{{ station.location }}</textarea>
