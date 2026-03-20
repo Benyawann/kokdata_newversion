@@ -34,7 +34,6 @@ body {
     width: 100%;
     /* ✅ เพิ่มความสูงคงที่เพื่อคำนวณ padding ด้านล่าง */
     height: 60px;
-    border-radius: 0 0 30px 30px;
 }
 
 .nav-container {
