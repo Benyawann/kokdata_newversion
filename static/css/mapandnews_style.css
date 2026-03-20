@@ -2091,7 +2091,7 @@ body {
 .station-list-container {
     flex: 1;
     overflow-y: auto;
-    max-height: 450px;
+    max-height: 600px;
     padding-right: 5px;
 }
 
