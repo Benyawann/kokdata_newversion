@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="container">
-        <a href="/" class="back-button">ย้อนกลับ</a>
+        <button class="back-button" onclick="goBack()">ย้อนกลับ</button>
         <div class="form-header">
             <h1>เพิ่มข้อมูลรายการสถานีตรวจสอบ</h1>
             <p>กรุณากรอกข้อมูลให้ครบถ้วน</p>
@@ -125,6 +125,15 @@
     </div>
 
     <script>
+    function goBack() {
+    // ถ้ามีหน้าก่อนหน้าในประวัติ → กลับไปหน้าก่อนหน้า
+    // ถ้าไม่มี → กลับไปหน้าหลัก
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.location.href = '/';
+    }
+}
     const WATER_CHECK_COUNT = 15;  // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจน้ำ
     const SOIL_CHECK_COUNT = 9; // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจตะกอนดิน
 
