@@ -28,6 +28,8 @@ body {
     font-weight: 600;
     transition: all 0.3s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    cursor: pointer;
 }
 
 .back-button:hover {
