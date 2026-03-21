@@ -693,188 +693,223 @@
             select.value = 'latest';
         }
 
-        function renderAllStations() {
+       // ===== ✅ แสดงสถานีทั้งหมด (เริ่มต้น) - แก้ไขให้ใช้ข้อมูลตามครั้งที่เลือก =====
+        async function renderAllStations() {
             const listContainer = document.getElementById('location-station-list');
             const selectedParam = document.getElementById('summary-param-select').value || (currentTab === 'water' ? 'สารหนู' : 'สารหนู');
             const standard = standards[currentTab]?.[selectedParam];
             const unit = units[currentTab]?.[selectedParam] || '';
             const selectedCheck = document.getElementById('filter-check').value;
-            
+    
             let currentData;
+            let checkNumberDisplay;
+    
+            // ✅ ดึงข้อมูลตามครั้งที่เลือก (ไม่ใช่ล่าสุดเสมอ)
             if (selectedCheck === 'latest') {
                 currentData = currentTab === 'water' ? tambonData.water.latest[selectedParam] : tambonData.soil.latest[selectedParam];
+                checkNumberDisplay = currentTab === 'water' ? tambonData.water_latest_check : tambonData.soil_latest_check;
             } else {
-                currentData = tambonData.water.latest[selectedParam];
+                currentData = await fetchDataByCheckForStationList(selectedCheck, selectedParam);
+                checkNumberDisplay = selectedCheck;
             }
-            
-            const stationsWithCoords = stationsInfo.filter(s => s.lat && s.lon);
-            let html = `<div style="margin-bottom:10px;font-weight:600;color:#1a73e8;">📍 แสดงสถานีทั้งหมด ${stationsWithCoords.length} แห่ง | สาร: ${selectedParam} ${unit ? '(' + unit + ')' : ''}</div>`;
-            
-            stationsWithCoords.forEach(st => {
-                let stationValue = null, isDanger = false, statusClass = 'status-nodata', statusText = 'ไม่มีข้อมูล', displayValue = 'ไม่มีข้อมูล';
-                
-                for (const t in currentData) {
-                    const stationDataList = currentData[t] || [];
-                    const stationData = stationDataList.find(d => d.station === st.id);
-                    if (stationData && stationData.value !== null) {
-                        stationValue = stationData.value;
-                        const rawValue = stationData.raw_value || stationValue;
-                        displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
-                        if (currentTab === 'water') {
-                            if (typeof standard === 'number' && stationValue > standard) isDanger = true;
-                        } else {
-                            if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) isDanger = true;
-                        }
-                        statusClass = isDanger ? 'status-danger' : 'status-safe';
-                        statusText = isDanger ? 'เกินมาตรฐาน' : 'ปกติ';
-                        break;
-                    }
-                }
-                
-                const valueBadgeClass = stationValue === null ? 'nodata' : (isDanger ? 'danger' : 'safe');
-                const valueDisplay = stationValue !== null ? `${displayValue} ${unit}` : '-';
-                
-                html += `
-                    <div class="station-card" onclick="window.location.href='/station/${st.id}'">
-                        <div class="station-card-info">
-                            <div class="station-card-name">${st.name}</div>
-                            <div class="station-card-code">รหัส: ${st.id} | ${st.province} > ${st.amphoe} > ${st.tambon}</div>
-                            <div class="station-card-value">
-                                ${selectedParam}: <span class="value-badge ${valueBadgeClass}">${valueDisplay}</span>
-                            </div>
-                        </div>
-                        <div class="station-card-status ${statusClass}">${statusText}</div>
-                    </div>`;
-            });
-            listContainer.innerHTML = html;
-        }
-
-        function renderStationsByFilter() {
-            const listContainer = document.getElementById('location-station-list');
-            const filteredStations = getFilteredStations();
-            
-            if (filteredStations.length === 0) {
-                listContainer.innerHTML = `<div class="empty-location-state"><div style="font-size:48px;margin-bottom:15px;opacity:0.5;">📭</div><p>ไม่พบสถานีตรวจวัดในพื้นที่ที่เลือก</p></div>`;
+    
+            if (!currentData) {
+                listContainer.innerHTML = `<div class="empty-location-state"><div style="font-size:48px;margin-bottom:15px;opacity:0.5;">⚠️</div><p>ไม่มีข้อมูลสำหรับครั้งที่เลือก</p></div>`;
                 return;
-            }
-            
-            const selectedParam = document.getElementById('filter-param').value || (currentTab === 'water' ? 'สารหนู' : 'สารหนู');
-            const standard = standards[currentTab]?.[selectedParam];
-            const unit = units[currentTab]?.[selectedParam] || '';
-            const selectedCheck = document.getElementById('filter-check').value;
-            
-            let currentData;
-            if (selectedCheck === 'latest') {
-                currentData = currentTab === 'water' ? tambonData.water.latest[selectedParam] : tambonData.soil.latest[selectedParam];
-            } else {
-                currentData = tambonData.water.latest[selectedParam];
-            }
-            
-            let html = `<div style="margin-bottom:10px;font-weight:600;color:#1a73e8;">📍 พบสถานี ${filteredStations.length} แห่ง | สาร: ${selectedParam} ${unit ? '(' + unit + ')' : ''}</div>`;
-            
-            filteredStations.forEach(st => {
-                let stationValue = null, isDanger = false, statusClass = 'status-nodata', statusText = 'ไม่มีข้อมูล', displayValue = 'ไม่มีข้อมูล';
-                
-                for (const t in currentData) {
-                    const stationDataList = currentData[t] || [];
-                    const stationData = stationDataList.find(d => d.station === st.id);
-                    if (stationData && stationData.value !== null) {
-                        stationValue = stationData.value;
-                        const rawValue = stationData.raw_value || stationValue;
-                        displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
-                        if (currentTab === 'water') {
-                            if (typeof standard === 'number' && stationValue > standard) isDanger = true;
-                        } else {
-                            if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) isDanger = true;
-                        }
-                        statusClass = isDanger ? 'status-danger' : 'status-safe';
-                        statusText = isDanger ? 'เกินมาตรฐาน' : 'ปกติ';
-                        break;
-                    }
-                }
-                
-                const valueBadgeClass = stationValue === null ? 'nodata' : (isDanger ? 'danger' : 'safe');
-                const valueDisplay = stationValue !== null ? `${displayValue} ${unit}` : '-';
-                
-                html += `
-                    <div class="station-card" onclick="window.location.href='/station/${st.id}'">
-                        <div class="station-card-info">
-                            <div class="station-card-name">${st.name}</div>
-                            <div class="station-card-code">รหัส: ${st.id} | ${st.tambon}</div>
-                            <div class="station-card-value">
-                                ${selectedParam}: <span class="value-badge ${valueBadgeClass}">${valueDisplay}</span>
-                            </div>
-                        </div>
-                        <div class="station-card-status ${statusClass}">${statusText}</div>
-                    </div>`;
-            });
-            listContainer.innerHTML = html;
         }
-
-        function clearAllFilters() {
-            document.getElementById('filter-province').value = "";
-            document.getElementById('filter-amphoe').innerHTML = '<option value="">-- ทั้งหมด --</option>';
-            document.getElementById('filter-tambon').innerHTML = '<option value="">-- ทั้งหมด --</option>';
-            renderAllStations();
-            updateMapMarkers();
-        }
-
-        function updateStationSummaryGlobal() {
-            const summaryBox = document.getElementById('station-summary-box');
-            if (!summaryBox || !tambonData) return;
-            
-            const paramKey = document.getElementById('summary-param-select').value || (currentTab === 'water' ? 'สารหนู' : 'สารหนู');
-            const standard = standards[currentTab]?.[paramKey];
-            const unit = units[currentTab]?.[paramKey] || '';
-            let currentData = currentTab === 'water' ? tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
-            
-            let exceeds = 0, normal = 0, noData = 0;
-            stationsInfo.forEach(st => {
-                if (!st.lat || !st.lon) return;
-                let stationValue = null, isDanger = false;
-                for (const t in currentData) {
-                    const stationDataList = currentData[t] || [];
-                    const stationData = stationDataList.find(d => d.station === st.id);
-                    if (stationData && stationData.value !== null) {
-                        stationValue = stationData.value;
-                        if (currentTab === 'water') {
-                            if (typeof standard === 'number' && stationValue > standard) isDanger = true;
-                        } else {
-                            if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) isDanger = true;
-                        }
-                        break;
-                    }
-                }
-                if (stationValue === null) noData++;
-                else if (isDanger) exceeds++;
-                else normal++;
-            });
-            
-            document.getElementById('summary-param-name').textContent = paramKey;
-            document.getElementById('summary-unit').textContent = unit ? `(${unit})` : '';
-            document.getElementById('stat-exceeds').textContent = exceeds;
-            document.getElementById('stat-normal').textContent = normal;
-            document.getElementById('stat-nodata').textContent = noData;
-            document.getElementById('stat-total').textContent = exceeds + normal + noData;
-            summaryBox.style.display = 'block';
-        }
-
-        // ✅ อัปเดตฟังก์ชัน switchTab() ให้โหลด Dropdown ในส่วนสรุปด้วย
-        function switchTab(mode) {
-            currentTab = mode;
-            document.getElementById('btn-water').classList.toggle('active', mode === 'water');
-            document.getElementById('btn-sediment').classList.toggle('active', mode === 'sediment');
     
-            document.getElementById('filter-province').value = "";
-            document.getElementById('filter-amphoe').innerHTML = '<option value="">-- ทั้งหมด --</option>';
-            document.getElementById('filter-tambon').innerHTML = '<option value="">-- ทั้งหมด --</option>';
+        const stationsWithCoords = stationsInfo.filter(s => s.lat && s.lon);
+        // แสดงจำนวนสถานีทั้งหมด + ครั้งที่ตรวจ
+        let html = `<div style="margin-bottom:10px;font-weight:600;color:#1a73e8;">📍 แสดงสถานีทั้งหมด ${stationsWithCoords.length} แห่ง </div>`;
     
-            populateCheckDropdown();   // โหลด dropdown เดิม (ถ้ายังใช้)
-            populateSummaryParamDropdown();    // ✅ โหลด dropdown ในส่วนสรุป
-            renderAllStations();
-            updateMapMarkers();
-            updateStationSummaryGlobal();
+        stationsWithCoords.forEach(st => {
+            let stationValue = null, displayValue = 'ไม่มีข้อมูล';
+        
+            // หาข้อมูลของสถานีนี้จากข้อมูลที่ดึงมา
+            for (const tambon in currentData) {
+                const stationDataList = currentData[tambon] || [];
+                const stationData = stationDataList.find(d => d.station === st.id);
+                if (stationData && stationData.value !== null) {
+                    stationValue = stationData.value;
+                    const rawValue = stationData.raw_value || stationValue;
+                    displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
+                    break;
+                }
+            }
+        
+            const valueDisplay = stationValue !== null ? `${displayValue} ${unit}` : '-';
+        
+            html += `
+            <div class="station-card" onclick="window.location.href='/station/${st.id}'">
+                <div class="station-card-info">
+                    <div class="station-card-name">${st.name}</div>
+                    <div class="station-card-code">รหัส: ${st.id} | ${st.province} > ${st.amphoe} > ${st.tambon}</div>
+                    <div class="station-card-value">
+                        <span class="value-badge">${valueDisplay}</span>
+                    </div>
+                </div>
+            </div>`;
+        });
+        listContainer.innerHTML = html;
+    }
+
+    // ===== ✅ แสดงสถานีตามฟิลเตอร์ที่เลือก - แก้ไขให้ใช้ข้อมูลตามครั้งที่เลือก =====
+    async function renderStationsByFilter() {
+        const listContainer = document.getElementById('location-station-list');
+        const filteredStations = getFilteredStations();
+    
+        if (filteredStations.length === 0) {
+            listContainer.innerHTML = `<div class="empty-location-state"><div style="font-size:48px;margin-bottom:15px;opacity:0.5;">📭</div><p>ไม่พบสถานีตรวจวัดในพื้นที่ที่เลือก</p></div>`;
+            return;
         }
+    
+        const selectedParam = document.getElementById('summary-param-select').value || (currentTab === 'water' ? 'สารหนู' : 'สารหนู');
+        const standard = standards[currentTab]?.[selectedParam];
+        const unit = units[currentTab]?.[selectedParam] || '';
+        const selectedCheck = document.getElementById('filter-check').value;
+    
+        let currentData;
+        let checkNumberDisplay;
+    
+        // ดึงข้อมูลตามครั้งที่เลือก (ไม่ใช่ล่าสุดเสมอ)
+        if (selectedCheck === 'latest') {
+            currentData = currentTab === 'water' ? tambonData.water.latest[selectedParam] : tambonData.soil.latest[selectedParam];
+            checkNumberDisplay = currentTab === 'water' ? tambonData.water_latest_check : tambonData.soil_latest_check;
+        } else {
+            currentData = await fetchDataByCheckForStationList(selectedCheck, selectedParam);
+            checkNumberDisplay = selectedCheck;
+        }
+    
+        if (!currentData) {
+            listContainer.innerHTML = `<div class="empty-location-state"><div style="font-size:48px;margin-bottom:15px;opacity:0.5;">⚠️</div><p>ไม่มีข้อมูลสำหรับครั้งที่เลือก</p></div>`;
+            return;
+        }
+    
+        // แสดงจำนวนสถานีที่กรองแล้ว + ครั้งที่ตรวจ
+        let html = `<div style="margin-bottom:10px;font-weight:600;color:#1a73e8;">📍 พบสถานี ${filteredStations.length} แห่ง </div>`;
+    
+        filteredStations.forEach(st => {
+            let stationValue = null, displayValue = 'ไม่มีข้อมูล';
+        
+            // ✅ หาข้อมูลของสถานีนี้จากข้อมูลที่ดึงมา
+            for (const tambon in currentData) {
+                const stationDataList = currentData[tambon] || [];
+                const stationData = stationDataList.find(d => d.station === st.id);
+                if (stationData && stationData.value !== null) {
+                    stationValue = stationData.value;
+                    const rawValue = stationData.raw_value || stationValue;
+                    displayValue = rawValue && typeof rawValue === 'string' && (rawValue.startsWith('<') || rawValue.startsWith('>')) ? rawValue : stationValue;
+                    break;
+                }
+            }
+        
+            const valueDisplay = stationValue !== null ? `${displayValue} ${unit}` : '-';
+        
+            html += `
+            <div class="station-card" onclick="window.location.href='/station/${st.id}'">
+                <div class="station-card-info">
+                    <div class="station-card-name">${st.name}</div>
+                    <div class="station-card-code">รหัส: ${st.id} | ${st.tambon}</div>
+                    <div class="station-card-value">
+                        <span class="value-badge">${valueDisplay}</span>
+                    </div>
+                </div>
+            </div>`;
+        });
+        listContainer.innerHTML = html;
+    }
+
+    // ===== ฟังก์ชันเมื่อเปลี่ยนรอบตรวจ - แก้ไขให้ดึงข้อมูลใหม่ =====
+    async function onCheckChange() {
+        //  แสดงสถานะกำลังโหลด
+        const listContainer = document.getElementById('location-station-list');
+        listContainer.innerHTML = `<div class="empty-location-state"><div style="font-size:48px;margin-bottom:15px;opacity:0.5;">⏳</div><p>กำลังโหลดข้อมูล...</p></div>`;
+    
+        // อัปเดตแผนที่และรายการสถานีพร้อมกัน
+        await updateMapMarkers();
+        await renderStationsByFilter();
+    }
+
+    function clearAllFilters() {
+        document.getElementById('filter-province').value = "";
+        document.getElementById('filter-amphoe').innerHTML = '<option value="">-- ทั้งหมด --</option>';
+        document.getElementById('filter-tambon').innerHTML = '<option value="">-- ทั้งหมด --</option>';
+        renderAllStations();
+        updateMapMarkers();
+    }
+
+    function updateStationSummaryGlobal() {
+        const summaryBox = document.getElementById('station-summary-box');
+        if (!summaryBox || !tambonData) return;
+            
+        const paramKey = document.getElementById('summary-param-select').value || (currentTab === 'water' ? 'สารหนู' : 'สารหนู');
+        const standard = standards[currentTab]?.[paramKey];
+        const unit = units[currentTab]?.[paramKey] || '';
+        let currentData = currentTab === 'water' ? tambonData.water.latest[paramKey] : tambonData.soil.latest[paramKey];
+            
+        let exceeds = 0, normal = 0, noData = 0;
+        stationsInfo.forEach(st => {
+            if (!st.lat || !st.lon) return;
+            let stationValue = null, isDanger = false;
+            for (const t in currentData) {
+                const stationDataList = currentData[t] || [];
+                const stationData = stationDataList.find(d => d.station === st.id);
+                if (stationData && stationData.value !== null) {
+                    stationValue = stationData.value;
+                    if (currentTab === 'water') {
+                        if (typeof standard === 'number' && stationValue > standard) isDanger = true;
+                    } else {
+                        if (standard?.unsafe !== undefined && stationValue >= standard.unsafe) isDanger = true;
+                    }
+                    break;
+                }
+            }
+            if (stationValue === null) noData++;
+            else if (isDanger) exceeds++;
+            else normal++;
+        });
+            
+        document.getElementById('summary-param-name').textContent = paramKey;
+        document.getElementById('summary-unit').textContent = unit ? `(${unit})` : '';
+        document.getElementById('stat-exceeds').textContent = exceeds;
+        document.getElementById('stat-normal').textContent = normal;
+        document.getElementById('stat-nodata').textContent = noData;
+        document.getElementById('stat-total').textContent = exceeds + normal + noData;
+        summaryBox.style.display = 'block';
+        }
+
+        // ===== ✅ ดึงข้อมูลตามรอบตรวจสำหรับรายการสถานี =====
+        async function fetchDataByCheckForStationList(checkNumber, paramKey) {
+            try {
+                const response = await fetch(
+                    `/api/data-by-check?check_number=${encodeURIComponent(checkNumber)}&type=${currentTab}`
+                );
+                const result = await response.json();
+                if (result.success && result.data && result.data[paramKey]) {
+                    return result.data[paramKey];
+                }
+            } catch (err) {
+            console.error('❌ Failed to fetch check data for station list:', err);
+        }
+        return null;
+    }
+
+    // ✅ อัปเดตฟังก์ชัน switchTab() ให้โหลด Dropdown ในส่วนสรุปด้วย
+    function switchTab(mode) {
+        currentTab = mode;
+        document.getElementById('btn-water').classList.toggle('active', mode === 'water');
+        document.getElementById('btn-sediment').classList.toggle('active', mode === 'sediment');
+    
+        document.getElementById('filter-province').value = "";
+        document.getElementById('filter-amphoe').innerHTML = '<option value="">-- ทั้งหมด --</option>';
+        document.getElementById('filter-tambon').innerHTML = '<option value="">-- ทั้งหมด --</option>';
+    
+        populateCheckDropdown();   // โหลด dropdown เดิม (ถ้ายังใช้)
+        populateSummaryParamDropdown();    // ✅ โหลด dropdown ในส่วนสรุป
+        renderAllStations();
+        updateMapMarkers();
+        updateStationSummaryGlobal();
+    }
 
         // ===== ข่าวสาร =====
         let newsData = [], newsIsLoading = true, newsLoadError = false, newsCurrentPage = 1, newsSearchQuery = '';
