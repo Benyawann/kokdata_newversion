@@ -43,13 +43,13 @@
                     <!-- ✅ เพิ่มฟิลด์ละติจูด/ลองจิจูด -->
                     <div class="form-group">
                         <label>ละติจูด</label>
-                        <input type="number" name="latitude" step="any" 
+                        <input type="text" id="lat" name="lat" step="any" 
                             value="{{ station_lat if station_lat else '' }}" 
                             placeholder="เช่น 19.922619">
                     </div>
                     <div class="form-group">
                         <label>ลองจิจูด</label>
-                        <input type="number" name="longitude" step="any"
+                        <input type="text" id="lon" name="lon" step="any"
                         value="{{ station_lon if station_lon else '' }}"
                         placeholder="เช่น 99.818520">
                     </div>
@@ -279,51 +279,6 @@ function showModal(type, title, message, onConfirm = null) {
     document.addEventListener('keydown', handleEsc);
 }
 
-// ส่งฟอร์ม
-document.getElementById('stationForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    // เตรียม FormData จากฟอร์ม
-    const formData = new FormData(document.getElementById('stationForm'));
-    // เพิ่มจำนวนคอลัมน์ปัจจุบัน (สำคัญ! เพราะ Backend ต้องรู้ว่ามีกี่ครั้งที่ตรวจ)
-    formData.append('water_check_count', waterCheckColumns);
-    formData.append('soil_check_count', soilCheckColumns);
-    
-    // แสดงสถานะกำลังบันทึก
-    const submitBtn = document.getElementById('submitBtn');
-    const originalBtnText = submitBtn?.textContent || 'บันทึกการแก้ไข';
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'กำลังบันทึก...';
-    }
-    
-    try {
-         // ส่งข้อมูลไป Backend ด้วย Fetch API
-        const response = await fetch(`/edit-station/{{ station.station }}`, {
-            method: 'POST',
-            body: formData // ส่งเป็น FormData (ไม่ใช่ JSON) เพราะมีไฟล์/ฟอร์มธรรมดา
-        });
-        const result = await response.json();
-        // จัดการผลลัพธ์
-        if (result.success) {
-            // แสดง Modal แทน alert()
-            showModal('success', 'แก้ไขสำเร็จ', 'ข้อมูลสถานี {{ station.station }} ถูกแก้ไขเรียบร้อยแล้ว', () => {
-                window.location.href = `/station/{{ station.station }}`;// กลับหน้ารายละเอียด
-            });
-        } else { // ผิดพลาด: แสดง Modal แจ้งข้อผิดพลาด
-            showModal('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่ทราบสาเหตุ');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showModal('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
-    } finally {
-        // คืนค่าปุ่ม (ไม่ว่าสำเร็จหรือล้มเหลว)
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalBtnText;
-        }
-    }
-});
-
 // === เริ่มต้น ===
 document.addEventListener('DOMContentLoaded', () => {
     // น้ำ
@@ -370,31 +325,55 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ส่งฟอร์ม
-    document.getElementById('stationForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        // ส่งจำนวนคอลัมน์ไปด้วย (ถ้าจำเป็น)
-        const formData = new FormData(document.getElementById('stationForm'));
-        formData.append('water_check_count', waterCheckColumns);
-        formData.append('soil_check_count', soilCheckColumns);
-        
-        try {
-            const response = await fetch(`/edit-station/{{ station.station }}`, {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert('✅ บันทึกการแก้ไขเรียบร้อยแล้ว!');
-                window.location.href = `/station/{{ station.station }}`;
-            } else {
-                alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+document.getElementById('stationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    // เตรียม FormData จากฟอร์ม
+    const formData = new FormData(document.getElementById('stationForm'));
+    // เพิ่มจำนวนคอลัมน์ปัจจุบัน (สำคัญ! เพราะ Backend ต้องรู้ว่ามีกี่ครั้งที่ตรวจ)
+    formData.append('water_check_count', waterCheckColumns);
+    formData.append('soil_check_count', soilCheckColumns);
+    
+    // แสดงสถานะกำลังบันทึก
+    const submitBtn = document.getElementById('submitBtn');
+    const originalBtnText = submitBtn?.textContent || 'บันทึกการแก้ไข';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'กำลังบันทึก...';
+    }
+    
+    try {
+         // ส่งข้อมูลไป Backend ด้วย Fetch API
+        const response = await fetch(`/edit-station/{{ station.station }}`, {
+            method: 'POST',
+            body: formData // ส่งเป็น FormData (ไม่ใช่ JSON) เพราะมีไฟล์/ฟอร์มธรรมดา
+        });
+        const result = await response.json();
+        if (result.success) {
+            // แสดงข้อความสั้นๆ แล้วรีไดเรกต์ไปหน้าแผนที่ทันที
+            submitBtn.textContent = '✅ บันทึกสำเร็จ!';
+            
+            // ✅ รีไดเรกต์ไปหน้าหลัก (แผนที่) เพื่ออัปเดตข้อมูลสรุปจำนวนสถานี
+            setTimeout(() => {
+                window.location.href = '/station/{{ station.station }}';  // ✅ ไปหน้า Map & News
+            }, 1500);
+            
+        } else {
+            alert('❌ เกิดข้อผิดพลาด: ' + (result.message || 'ไม่ทราบสาเหตุ'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
-    });
+    } catch (error) {
+        console.error('Error:', error);
+        showModal('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } finally {
+        // คืนค่าปุ่ม (ไม่ว่าสำเร็จหรือล้มเหลว)
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
+        }
+    }
 });
+    });
 </script>
 </body>
 </html>
