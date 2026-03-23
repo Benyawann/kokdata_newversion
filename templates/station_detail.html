@@ -329,55 +329,19 @@
 
 <script>
 function goBack() {
-    // ✅ ดึงพารามิเตอร์จาก URL ปัจจุบัน
-    const urlParams = new URLSearchParams(window.location.search);
-    const fromEdit = urlParams.get('from_edit');      // เช่น ?from_edit=1
-    const fromAdd = urlParams.get('from_add');        // เช่น ?from_add=1
-    const returnUrl = urlParams.get('return_url');    // เช่น ?return_url=/stations
-    
-    const isLoggedIn = {{ 'true' if session.logged_in else 'false' }};
+    // ✅ ตรวจสอบว่ามาจากหน้าแก้ไขหรือไม่
     const referrer = document.referrer;
     
-    // ✅ กรณี 1: มีพารามิเตอร์ return_url → กลับไปตามนั้น
-    if (returnUrl && returnUrl.startsWith('/')) {
-        window.location.href = returnUrl;
-        return;
-    }
-    
-    // ✅ กรณี 2: มาจากหน้าแก้ไข (เช็คทั้งพารามิเตอร์และ referrer)
-    if (fromEdit === '1' || (isLoggedIn && referrer && referrer.includes('/edit-station/'))) {
-        // ถ้ามีประวัติย้อนกลับมากกว่า 2 ขั้น → ย้อน 2 ขั้นเพื่อข้ามหน้าแก้ไข
-        if (window.history.length > 2) {
-            window.history.go(-2);
-        } else {
-            // ถ้าประวัติไม่พอ → กลับไปหน้า /stations หรือหน้าหลัก
-            window.location.href = '/stations';
-        }
-        return;
-    }
-    
-    // ✅ กรณี 3: มาจากหน้าเพิ่มสถานี
-    if (fromAdd === '1') {
-        window.location.href = '/stations';
-        return;
-    }
-    
-    // ✅ กรณีทั่วไป: ตรวจสอบว่า referrer ปลอดภัย (อยู่ในโดเมนเดียวกัน)
-    if (referrer && referrer.includes(window.location.hostname)) {
-        // ✅ เช็คเพิ่มเติม: ถ้า referrer มีพารามิเตอร์ที่ไม่ต้องการ → ตัดออก
-        try {
-            const refUrl = new URL(referrer);
-            // ถ้า referrer เป็นหน้าเดิมที่มีพารามิเตอร์แปลกๆ → กลับไปหน้าหลักแทน
-            if (refUrl.pathname === window.location.pathname) {
-                window.location.href = '/';
-                return;
-            }
-        } catch(e) {
-            // ถ้า parse URL ไม่ผ่าน → ใช้วิธีปกติ
-        }
+    // ถ้ามาจากหน้าแก้ไข (/edit-station/...) → ไปหน้าหลักเลย
+    if (referrer && referrer.includes('/edit-station/')) {
+        window.location.href = '/';
+    } 
+    // กรณีอื่นๆ → ใช้ history.back() ตามปกติ
+    else if (referrer && referrer.includes(window.location.hostname)) {
         window.history.back();
-    } else {
-        // ถ้า referrer เป็นเว็บอื่นหรือไม่มี → กลับไปหน้าหลัก
+    } 
+    // กรณีไม่มี referrer หรือเป็นเว็บอื่น → ไปหน้าหลัก
+    else {
         window.location.href = '/';
     }
 }
