@@ -119,7 +119,7 @@ body {
 .water-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 800px;
+    min-width: 900px;
 }
 
 .water-table th,
@@ -134,7 +134,7 @@ body {
 .soil-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 800px;
+    min-width: 900px;
 }
 
 .water-table th {
