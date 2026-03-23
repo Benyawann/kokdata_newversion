@@ -36,7 +36,7 @@
     <div class="data-source-box">
         <strong>📊 ใช้ข้อมูลจาก:</strong> สถานการณ์คุณภาพสิ่งแวดล้อมในแม่น้ำกกและลำน้ำสาขา 
         แม่น้ำสาย แม่น้ำรวก แม่น้ำโขง และผลกระทบกรณีปัญหาสารปนเปื้อนเกินค่ามาตรฐาน 
-        ข้อมูล ณ วันที่ 29 มกราคม 2569 เวลา 16.30 น. 
+        ข้อมูล ณ วันที่ 16 มีนาคม 2569 เวลา 16.30 น. 
         สำนักงานสิ่งแวดล้อมและควบคุมมลพิษที่ 1 (เชียงใหม่)
     </div>
 
@@ -166,7 +166,7 @@
         <div class="period-note">
             <strong>กรมควบคุมมลพิษ</strong> ได้ดำเนินตรวจวัดและเก็บตัวอย่างน้ำในแม่น้ำกกและลำน้ำสาขา 
             แม่น้ำสาย แม่น้ำรวก และแม่น้ำโขง ระหว่างเดือนมีนาคม 2568 ถึงเดือนมกราคม 2569 ดังนี้:<br>
-            {% for i in range(1, 16) %}
+            {% for i in range(1, 17) %}
             ▪ <strong>ครั้งที่ {{ i }}</strong> {% if i==1 %} เมื่อวันที่ 19 - 24 มีนาคม 2568 และวันที่ 9 เมษายน 2568
             {% elif i==2 %} เมื่อวันที่ 21 - 24 เมษายน 2568 และวันที่ 29 เมษายน - 2 พฤษภาคม 2568
             {% elif i==3 %} เมื่อวันที่ 12 - 16 พฤษภาคม 2568
@@ -181,7 +181,8 @@
             {% elif i==12 %} เมื่อวันที่ 22 – 26 กันยายน 2568
             {% elif i==13 %} เมื่อวันที่ 4 – 7 พฤศจิกายน 2568
             {% elif i==14 %} เมื่อวันที่ 9 – 12 ธันวาคม 2568
-            {% elif i==15 %}เมื่อวันที่ 13 – 16 มกราคม 2569{% endif %}<br>
+            {% elif i==15 %} เมื่อวันที่ 13 – 16 มกราคม 2569
+            {% elif i==16 %} เมื่อวันที่ 24 - 27 กุมภาพันธ์ 2569{% endif %}<br>
             {% endfor %}
         </div>
         {% else %}
@@ -328,11 +329,55 @@
 
 <script>
 function goBack() {
-    // ถ้ามีหน้าก่อนหน้าในประวัติ → กลับไปหน้าก่อนหน้า
-    // ถ้าไม่มี → กลับไปหน้าหลัก
-    if (window.history.length > 1) {
+    // ✅ ดึงพารามิเตอร์จาก URL ปัจจุบัน
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromEdit = urlParams.get('from_edit');      // เช่น ?from_edit=1
+    const fromAdd = urlParams.get('from_add');        // เช่น ?from_add=1
+    const returnUrl = urlParams.get('return_url');    // เช่น ?return_url=/stations
+    
+    const isLoggedIn = {{ 'true' if session.logged_in else 'false' }};
+    const referrer = document.referrer;
+    
+    // ✅ กรณี 1: มีพารามิเตอร์ return_url → กลับไปตามนั้น
+    if (returnUrl && returnUrl.startsWith('/')) {
+        window.location.href = returnUrl;
+        return;
+    }
+    
+    // ✅ กรณี 2: มาจากหน้าแก้ไข (เช็คทั้งพารามิเตอร์และ referrer)
+    if (fromEdit === '1' || (isLoggedIn && referrer && referrer.includes('/edit-station/'))) {
+        // ถ้ามีประวัติย้อนกลับมากกว่า 2 ขั้น → ย้อน 2 ขั้นเพื่อข้ามหน้าแก้ไข
+        if (window.history.length > 2) {
+            window.history.go(-2);
+        } else {
+            // ถ้าประวัติไม่พอ → กลับไปหน้า /stations หรือหน้าหลัก
+            window.location.href = '/stations';
+        }
+        return;
+    }
+    
+    // ✅ กรณี 3: มาจากหน้าเพิ่มสถานี
+    if (fromAdd === '1') {
+        window.location.href = '/stations';
+        return;
+    }
+    
+    // ✅ กรณีทั่วไป: ตรวจสอบว่า referrer ปลอดภัย (อยู่ในโดเมนเดียวกัน)
+    if (referrer && referrer.includes(window.location.hostname)) {
+        // ✅ เช็คเพิ่มเติม: ถ้า referrer มีพารามิเตอร์ที่ไม่ต้องการ → ตัดออก
+        try {
+            const refUrl = new URL(referrer);
+            // ถ้า referrer เป็นหน้าเดิมที่มีพารามิเตอร์แปลกๆ → กลับไปหน้าหลักแทน
+            if (refUrl.pathname === window.location.pathname) {
+                window.location.href = '/';
+                return;
+            }
+        } catch(e) {
+            // ถ้า parse URL ไม่ผ่าน → ใช้วิธีปกติ
+        }
         window.history.back();
     } else {
+        // ถ้า referrer เป็นเว็บอื่นหรือไม่มี → กลับไปหน้าหลัก
         window.location.href = '/';
     }
 }
