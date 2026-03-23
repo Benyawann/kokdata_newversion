@@ -1332,7 +1332,7 @@ def get_stations_list():
             tambon = row['tambon'] or ''
             stations.append({
                 'id':       row['station'],
-                'name':     f"แม่น้ำ{river} ({tambon})" if river else row['station'],
+                'name':     f"{river} ({tambon})" if river else row['station'],
                 'river':    river,
                 'tambon':   tambon,
                 'amphoe':   row['amphoe']   or '',
