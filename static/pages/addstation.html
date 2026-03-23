@@ -134,7 +134,7 @@
         window.location.href = '/';
     }
 }
-    const WATER_CHECK_COUNT = 15;  // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจน้ำ
+    const WATER_CHECK_COUNT = 16;  // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจน้ำ
     const SOIL_CHECK_COUNT = 9; // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจตะกอนดิน
 
     // ฟังก์ชันสร้างแถว
@@ -329,7 +329,7 @@
         });
 
         // จัดการ Submit Form - บันทึกแล้วไปหน้าแผนที่เพื่ออัปเดตสรุป
-document.getElementById('stationForm').addEventListener('submit', async (e) => {
+    document.getElementById('stationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const originalText = submitBtn.textContent;
