@@ -246,6 +246,7 @@ def get_station_by_code(station_code):
 def get_water_data(station_code):
     conn = get_db()
     cur = conn.cursor()
+    # ดึงข้อมูลน้ำเรียงตามครั้งที่ตรวจ
     cur.execute(r"""
     SELECT parameter, unit, location, check_number, value, numeric_value
     FROM water_data
@@ -255,6 +256,7 @@ def get_water_data(station_code):
         check_number,
         parameter
     """, (station_code.strip(),))
+    # สรา้งโครงสร้างข้อมูลแบบ Pivot
     pivot_data = {}
     numeric_data = {}
     check_numbers = []
@@ -269,6 +271,7 @@ def get_water_data(station_code):
             pivot_data[param] = {}
             numeric_data[param] = {}
             unit_info[param] = unit
+        # แปลงครั้งที่ 1 เป็น ตัวเลข 1 สำหรับเรียงลำดับ
         try:
             check_num_int = int(check_num.split('ครั้งที่')[-1].strip())
             if check_num_int not in check_numbers:
@@ -281,6 +284,7 @@ def get_water_data(station_code):
             pivot_data[param][check_num] = value
             numeric_data[param][check_num] = numeric_value
     conn.close()
+    # เรียงลำดับครั้งที่ตรวจ โดยตัวเลขก่อน และตามด้วยข้อความ
     numeric_checks = sorted([c for c in check_numbers if isinstance(c, int)])
     text_checks = sorted([c for c in check_numbers if not isinstance(c, int)])
     sorted_checks = numeric_checks + text_checks
@@ -506,13 +510,13 @@ def delete_station(station_code):
 @app.route('/station/<station_code>')
 def station_detail(station_code):
     try:
-        station = get_station_by_code(station_code)  # ✅ มี lat/lon แล้ว
+        station = get_station_by_code(station_code)  # มี lat/lon แล้ว
         if not station:
             return f"ไม่พบสถานี: {station_code}", 404
         water_data = get_water_data(station_code)
         soil_data = get_soil_data(station_code)
         return render_template('station_detail.html',
-            station=station,          # ✅ station มี lat/lon
+            station=station,  #  station มี lat/lon
             water_data=water_data,
             soil_data=soil_data)
     except Exception as e:
@@ -527,6 +531,7 @@ def station_detail(station_code):
 def edit_station(station_code):
     if request.method == 'POST':
         try:
+            # === ดึงข้อมูลพื้นฐาน ===
             station = request.form['station'].strip()
             river = request.form['river'].strip()
             tambon = request.form['tambon'].strip()
@@ -700,7 +705,7 @@ def api_add_station():
         conn = get_db()
         cur  = conn.cursor()
 
-        # ✅ INSERT พร้อม lat, lon
+        # INSERT พร้อม lat, lon
         cur.execute("""
             INSERT INTO station_data
                 (station, river, tambon, amphoe, province, location, lat, lon)
@@ -845,6 +850,7 @@ def api_map_data():
     try:
         conn = get_db()
         cur = conn.cursor()
+        # ดึงรายการครั้งที่ตรวจที่มีข้อมูล
         cur.execute("""
         SELECT DISTINCT check_number
         FROM water_data
@@ -1027,7 +1033,7 @@ def api_station_history():
         rows = cur.fetchall()
         conn.close()
         
-        # ✅ แปลงข้อมูลให้เป็นรูปแบบเดียวกัน (ทั้งน้ำและดิน)
+        # แปลงข้อมูลให้เป็นรูปแบบเดียวกัน (ทั้งน้ำและดิน)
         check_numbers = [row['check_number'] for row in rows]
         values = [float(row['numeric_value']) if row['numeric_value'] is not None else None for row in rows]
         
@@ -1039,7 +1045,7 @@ def api_station_history():
             'success': True,
             'station': station_id,
             'parameter': param_key,
-            'type': data_type,  # ✅ เพิ่ม type เพื่อ frontend รู้ว่าเป็นน้ำหรือดิน
+            'type': data_type,  # เพิ่ม type เพื่อ frontend รู้ว่าเป็นน้ำหรือดิน
             'check_numbers': check_numbers,
             'values': values
         })
@@ -1317,7 +1323,7 @@ def get_stations_list():
     try:
         conn = get_db()
         cur  = conn.cursor()
-        # ✅ เพิ่ม lat, lon ใน SELECT
+        # เพิ่ม lat, lon ใน SELECT
         cur.execute("""
             SELECT station, river, tambon, amphoe, province, location, lat, lon
             FROM station_data
@@ -1337,8 +1343,8 @@ def get_stations_list():
                 'tambon':   tambon,
                 'amphoe':   row['amphoe']   or '',
                 'province': row['province'] or '',
-                'lat': float(row['lat']) if row['lat'] is not None else None,  # ✅
-                'lon': float(row['lon']) if row['lon'] is not None else None,  # ✅
+                'lat': float(row['lat']) if row['lat'] is not None else None,  
+                'lon': float(row['lon']) if row['lon'] is not None else None,  
             })
 
         return jsonify({'success': True, 'stations': stations, 'count': len(stations)})
@@ -1348,7 +1354,7 @@ def get_stations_list():
         import traceback; traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
     
-# ✅ เพิ่มตัวแปร Hardcode ข่าว (แทน Database)
+# เพิ่มตัวแปร Hardcode ข่าว (แทน Database)
 HARDCODED_NEWS = [
     {
         'id': 1,
@@ -1463,7 +1469,7 @@ HARDCODED_NEWS = [
     }
 ]
 
-# ✅ แก้ไขฟังก์ชัน get_ryt9_news() ให้ใช้ Hardcode
+# แก้ไขฟังก์ชัน get_ryt9_news() ให้ใช้ Hardcode
 @app.route('/api/ryt9-news', methods=['GET'])
 def get_ryt9_news():
     """ดึงข่าวจาก HARDCODED_NEWS (ไม่ต้องใช้ Database)"""

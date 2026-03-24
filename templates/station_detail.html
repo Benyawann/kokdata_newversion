@@ -328,19 +328,20 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 
 <script>
+// ฟังก?ชันย้อนกลับ
 function goBack() {
-    // ✅ ตรวจสอบว่ามาจากหน้าแก้ไขหรือไม่
+    // ตรวจสอบว่ามาจากหน้าแก้ไขหรือไม่
     const referrer = document.referrer;
     
-    // ถ้ามาจากหน้าแก้ไข (/edit-station/...) → ไปหน้าหลักเลย
+    // ถ้ามาจากหน้าแก้ไข (/edit-station/...) จะไปหน้าหลักเลย
     if (referrer && referrer.includes('/edit-station/')) {
         window.location.href = '/';
     } 
-    // กรณีอื่นๆ → ใช้ history.back() ตามปกติ
+    // กรณีอื่นๆ จะใช้ history.back() ตามปกติ
     else if (referrer && referrer.includes(window.location.hostname)) {
         window.history.back();
     } 
-    // กรณีไม่มี referrer หรือเป็นเว็บอื่น → ไปหน้าหลัก
+    // กรณีไม่มี referrer หรือเป็นเว็บอื่น จะไปหน้าหลัก
     else {
         window.location.href = '/';
     }
@@ -348,11 +349,12 @@ function goBack() {
 
 // ========== Map Initialization ==========
 document.addEventListener('DOMContentLoaded', function() {
+    // ใช้ |tojson เพื่อแปลงค่า Python ไป JavaScript 
     const lat = {{ station.lat | tojson }};
     const lon = {{ station.lon | tojson }};
     const name = {{ station.station | tojson }};
     const loc = {{ station.location | tojson }};
-    
+    // กรณีไม่มีพิกัด จะแสดงข้อความแทนแผนที่
     if (!lat || !lon) {
         document.getElementById('station-map').innerHTML = `
             <div style="height:100%;display:flex;align-items:center;justify-content:center;
@@ -361,12 +363,12 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>`;
         return;
     }
-    
+    // สร้างแผนที่
     const stationMap = L.map('station-map').setView([lat, lon], 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors', maxZoom: 19
     }).addTo(stationMap);
-    
+    // เพิ่ม Marker พร้อม Popup
     L.marker([lat, lon]).addTo(stationMap)
         .bindPopup(`<div style="text-align:center;min-width:180px;padding:6px;">
             <strong style="color:#2c3e50;">🌊 ${name}</strong><br>
@@ -374,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <hr style="margin:6px 0;border:0;border-top:1px solid #ddd;">
             <span style="color:#666;font-size:0.8em;">Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}</span>
         </div>`).openPopup();
-    
+    // รีเฟรชขนาดแผนที่หลังโหลดเสร็จ
     setTimeout(() => stationMap.invalidateSize(), 100);
 });
 
@@ -394,7 +396,7 @@ function showDeleteModal(stationCode, onConfirm) {
         modal?.removeEventListener('click', handleOverlay);
         document.removeEventListener('keydown', handleEsc);
     };
-    
+    // ฟังก์ชันจัดการเหตุการณ์
     const handleConfirm = () => { modal.classList.remove('active'); if(onConfirm) onConfirm(); cleanup(); };
     const handleCancel = () => { modal.classList.remove('active'); cleanup(); };
     const handleOverlay = (e) => { if(e.target===modal) { modal.classList.remove('active'); cleanup(); } };
@@ -413,7 +415,7 @@ function showDeleteSuccessModal(stationCode, onConfirm) {
     
     message.textContent = `ลบสถานี "${stationCode}" เรียบร้อยแล้ว`;
     modal.classList.add('active');
-    
+    // ฟังก์ชันลบ Event Listeners 
     const cleanup = () => {
         confirmBtn?.removeEventListener('click', handleConfirm);
         modal?.removeEventListener('click', handleOverlay);
@@ -428,14 +430,14 @@ function showDeleteSuccessModal(stationCode, onConfirm) {
     modal?.addEventListener('click', handleOverlay);
     document.addEventListener('keydown', handleEsc);
 }
-
+// ฟังก์ชันลบสถานี
 function deleteStation(stationCode) {
     showDeleteModal(stationCode, () => {
         fetch(`/delete-station/${stationCode}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(data => {
             if(data.success) {
-                showDeleteSuccessModal(stationCode, () => { window.location.href = '/'; });
+                showDeleteSuccessModal(stationCode, () => { window.location.href = '/'; }); // กลับไปหน้าหลัก  
             } else { alert('❌ เกิดข้อผิดพลาด: ' + data.message); }
         })
         .catch(() => alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'));
@@ -458,18 +460,20 @@ function filterDataForChart(numeric_values, check_numbers) {
     }
     return { data, labels };
 }
-
+// สร้างกราฟสำหรับ Water Chart
 function createWaterChart(parameter) {
+    // ค้นหาข้อมูลพารามิเตอร์ทที่เลือก
     const row = waterData.pivot_list_filtered?.find(r => r.parameter === parameter);
     if(!row || !row.numeric_values) return;
-    
+    // กรองข้อมูลเฉพาะค่าที่เป็นตัวเลข
     const { data, labels } = filterDataForChart(row.numeric_values, waterData.check_numbers);
     if(data.length === 0) return;
     
     const ctx = document.getElementById('waterChart').getContext('2d');
     if(waterChart) waterChart.destroy();
-    
+    // กำหนดค่ามาตรฐานสำหรับเส้นแสดงค่ามาตรฐาน
     const thresholds = { 'สารหนู':0.01,'แมงกานีส':1.0,'ตะกั่ว':0.05,'ปรอท':0.002,'ทองแดง':0.1,'สังกะสี':1.0,'นิกเกิล':0.1,'แคดเมียม':0.005 };
+    // สร้าง Annotation เส้นแสดงค่ามาตรฐาน
     const annotations = thresholds[parameter] ? {
         thresholdLine: { type:'line', yMin:thresholds[parameter], yMax:thresholds[parameter],
             borderColor:'red', borderWidth:2, borderDash:[6,6],
@@ -559,19 +563,19 @@ function setupChartHandlers() {
     const waterContainer = document.getElementById('water-chart-container');
     
     if(waterSelect && waterContainer) {
-        // ✅ เมื่อเปลี่ยนสาร → แสดงกราฟทันที + แทนที่กราฟเก่า
+        // เมื่อเปลี่ยนสาร → แสดงกราฟทันที + แทนที่กราฟเก่า
         waterSelect.addEventListener('change', function() {
             if(this.value) {
                 // แสดง container กราฟ
                 waterContainer.style.display = 'block';
                 
-                // ✅ ทำลายกราฟเก่าก่อนสร้างใหม่ (ป้องกันซ้อน)
+                // ทำลายกราฟเก่าก่อนสร้างใหม่ (ป้องกันซ้อน)
                 if(waterChart) {
                     waterChart.destroy();
                     waterChart = null;
                 }
                 
-                // ✅ สร้างกราฟใหม่ทันที
+                // สร้างกราฟใหม่ทันที
                 createWaterChart(this.value);
             } else {
                 // ถ้าไม่เลือกอะไร → ซ่อนกราฟ
@@ -589,19 +593,19 @@ function setupChartHandlers() {
     const soilContainer = document.getElementById('soil-chart-container');
     
     if(soilSelect && soilContainer) {
-        // ✅ เมื่อเปลี่ยนสาร → แสดงกราฟทันที + แทนที่กราฟเก่า
+        // เมื่อเปลี่ยนสาร → แสดงกราฟทันที + แทนที่กราฟเก่า
         soilSelect.addEventListener('change', function() {
             if(this.value) {
                 // แสดง container กราฟ
                 soilContainer.style.display = 'block';
                 
-                // ✅ ทำลายกราฟเก่าก่อนสร้างใหม่ (ป้องกันซ้อน)
+                // ทำลายกราฟเก่าก่อนสร้างใหม่ (ป้องกันซ้อน)
                 if(soilChart) {
                     soilChart.destroy();
                     soilChart = null;
                 }
                 
-                // ✅ สร้างกราฟใหม่ทันที
+                // สร้างกราฟใหม่ทันที
                 createSoilChart(this.value);
             } else {
                 // ถ้าไม่เลือกอะไร → ซ่อนกราฟ

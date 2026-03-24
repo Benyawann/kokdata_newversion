@@ -186,15 +186,15 @@
 </div>
 </div>
 
-    <script>
-        function toggleMobileMenu() {
+<script>
+function toggleMobileMenu() {
     const navItems = document.getElementById('navItems');
     if (navItems) {
         navItems.classList.toggle('show');
     }
 }
 
-// ✅ ป้องกันกรณีโหลดไม่ทัน
+//  ป้องกันกรณีโหลดไม่ทัน
 document.addEventListener('DOMContentLoaded', function() {
     // ยืนยันว่าฟังก์ชันพร้อมใช้
     if (typeof toggleMobileMenu !== 'function') {
@@ -204,19 +204,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-    // ========== Logout Modal Handler ==========
+    // Modal ยืนยันออกจากระบบ
     function showLogoutModal(onConfirm) {
         const modal = document.getElementById('logoutModal');
         const confirmBtn = document.getElementById('modalConfirmBtn');
         const cancelBtn = document.getElementById('modalCancelBtn');
     
-    // แสดงโมดัล
+    // แสดง Modal
     modal.classList.add('active');
     
     // ฟังก์ชันจัดการเมื่อกดปุ่มยืนยัน
     const handleConfirm = () => {
         modal.classList.remove('active');
-        if (onConfirm) onConfirm();
+        if (onConfirm) onConfirm(); // เรียกฟังก์ชันเมื่อกดยืนยัน
         cleanup();
     };
     
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {% for tambon in unique_tambons %}"{{ tambon }}"{% if not loop.last %},{% endif %}{% endfor %}
         ];
 
-        // ✅ ดึงตำบลจาก URL parameter หรือเลือกจากฟิลเตอร์
+        //  ดึงตำบลจาก URL parameter หรือเลือกจากฟิลเตอร์
         function getSelectedTambon() {
             const urlParams = new URLSearchParams(window.location.search);
             const urlTambon = urlParams.get('tambon');
@@ -293,11 +293,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return urlTambon || filterTambon || '';
         }
 
-        // ✅ แก้ไขฟังก์ชัน updateTambonHeader() ให้รองรับกรณีไม่พบผล
+        // แก้ไขฟังก์ชัน updateTambonHeader() ให้รองรับกรณีไม่พบผล
         function updateTambonHeader(showAll = false) {
             const selectedTambon = filterTambon.value;  // อ่านจากฟิลเตอร์โดยตรง
     
-        // ✅ ถ้า showAll=true หรือไม่มีตำบลที่เลือก → แสดงสถานะเริ่มต้น
+        // ถ้า showAll=true หรือไม่มีตำบลที่เลือก จะแสดงสถานะเริ่มต้น
         if (showAll || !selectedTambon) {
             tambonNameEl.textContent = 'เลือกตำบลเพื่อดูสถานี';
             locationPathEl.textContent = '-';
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
     
-        // ✅ กรณีมีตำบลที่เลือก → แสดงข้อมูลตำบลนั้น
+        // กรณีมีตำบลที่เลือก จะแสดงข้อมูลตำบลนั้น
         tambonNameEl.textContent = selectedTambon;
     
         let path = selectedTambon;
@@ -326,12 +326,12 @@ document.addEventListener('DOMContentLoaded', function() {
         locationPathEl.textContent = path;
         riverNameEl.textContent = foundRiver || '-';
     
-        // ✅ นับสถานีในตำบลนี้ (นับจาก allStations ไม่ใช่จากผลการกรอง)
+        // นับสถานีในตำบลนี้ (นับจาก allStations ไม่ใช่จากผลการกรอง)
         const count = allStations.filter(s => s.tambon === selectedTambon).length;
         stationCountEl.textContent = count;
     }
 
-    // ✅ แก้ไขฟังก์ชัน filterStations() ให้เรียก updateTambonHeader() ถูกต้อง
+    // ฟังก์ชันกรองสถานี
     function filterStations() {
         const searchTerm = searchInput.value.toLowerCase().trim();
         const selectedRiver = filterRiver.value;
@@ -342,13 +342,15 @@ document.addEventListener('DOMContentLoaded', function() {
         let visibleCount = 0;
 
         stationCards.forEach(card => {
+            // อ่านค่าจาก attribute
             const river = card.dataset.river;
             const province = card.dataset.province;
             const amphoe = card.dataset.amphoe;
             const tambon = card.dataset.tambon;
             const station = card.dataset.station.toLowerCase();
             const location = card.dataset.location.toLowerCase();
-
+           
+            // เงื่อนไขการกรอง
             const matchesSearch = !searchTerm || 
                 station.includes(searchTerm) || 
                 river.toLowerCase().includes(searchTerm) ||
@@ -358,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const matchesProvince = !selectedProvince || province === selectedProvince;
             const matchesAmphoe = !selectedAmphoe || amphoe === selectedAmphoe;
             const matchesTambon = !selectedTambon || tambon === selectedTambon;
-
+        // แสดง/ซ่อน การ์ดตาม result
         if (matchesSearch && matchesRiver && matchesProvince && matchesAmphoe && matchesTambon) {
             card.style.display = 'block';
             visibleCount++;
@@ -366,25 +368,25 @@ document.addEventListener('DOMContentLoaded', function() {
             card.style.display = 'none';
         }
     });
-    
+    // อัปเดตจำนวนที่แสดงผล
     filteredCount.textContent = visibleCount;
 
-    // ✅ แก้ไขจุดนี้: อัปเดตเฮดเดอร์ตามสถานะการกรอง
+    // อัปเดตเฮดเดอร์ตามสถานะการกรอง
     if (selectedTambon && visibleCount === 0 && searchTerm) {
-        // ✅ ถ้าเลือกตำบลไว้ แต่ค้นหาแล้วไม่พบ → แสดงข้อความพิเศษ
+        // ถ้าเลือกตำบลไว้ แต่ค้นหาแล้วไม่พบ จะแสดงข้อความพิเศษ
         tambonNameEl.textContent = `ไม่พบ "${searchTerm}" ในตำบล ${selectedTambon}`;
         locationPathEl.textContent = '-';
         riverNameEl.textContent = '-';
         stationCountEl.textContent = '0';
     } else if (selectedTambon && visibleCount === 0 && !searchTerm) {
-        // ✅ ถ้าเลือกตำบล แต่กรองอื่นแล้วไม่พบ → แสดงว่าไม่พบสถานีในตำบลนี้
+        // ถ้าเลือกตำบล แต่กรองอื่นแล้วไม่พบ แสดงว่าไม่พบสถานีในตำบลนี้
         tambonNameEl.textContent = `ไม่พบสถานีในตำบล ${selectedTambon}`;
         stationCountEl.textContent = '0';
     } else {
-        // ✅ ปกติ → อัปเดตเฮดเดอร์ตามตำบลที่เลือก
+        // ปกติ จะอัปเดตเฮดเดอร์ตามตำบลที่เลือก
         updateTambonHeader();
     }
-
+    // แสดงข้อความ "ไม่พบสถานี" กรณีไม่มีสถานี
     if (visibleCount === 0) {
         noResults.style.display = 'block';
         stationsGrid.style.display = 'none';
@@ -394,14 +396,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-        // Update Amphoe dropdown based on selected Province
+        // อัปเดตตัวเลือกอำเภอตามจังหวัด
         function updateAmphoeDropdown() {
             const selectedProvince = filterProvince.value;
             const currentValue = filterAmphoe.value;
-            
+            // รีเซ็ตตัวเลือก
             filterAmphoe.innerHTML = '<option value="">ทั้งหมด (อำเภอ)</option>';
             
             if (selectedProvince && locationHierarchy[selectedProvince]) {
+                // ถ้าเลือกจังหวัด จะแสดงเฉพาะอำเภอในจังหวัดนั้น
                 const amphoes = Object.keys(locationHierarchy[selectedProvince]).sort();
                 amphoes.forEach(amphoe => {
                     const option = document.createElement('option');
@@ -417,12 +420,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     filterAmphoe.appendChild(option);
                 });
             }
-            
+            // ถ้าค่าเดิมไม่มีในตัวเลือก จะรีเซ็ตเป็นค่าว่าง
             if (currentValue && !Array.from(filterAmphoe.options).some(opt => opt.value === currentValue)) {
                 filterAmphoe.value = '';
             }
             
-            updateTambonDropdown();
+            updateTambonDropdown(); // อัปเดตตำบลต่อ
         }
         
         // Update Tambon dropdown
@@ -468,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // ✅ ฟังก์ชันกรองสถานีหลัก
+        // ฟังก์ชันกรองสถานีหลัก
         function filterStations() {
             const searchTerm = searchInput.value.toLowerCase().trim();
             const selectedRiver = filterRiver.value;
@@ -515,7 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // ✅ ล้างตัวกรองทั้งหมด
+        // ล้างตัวกรองทั้งหมด
         function clearFilters() {
             searchInput.value = '';
             filterRiver.value = '';
@@ -549,24 +552,24 @@ document.addEventListener('DOMContentLoaded', function() {
         filterTambon.addEventListener('change', function() {
             const tambon = this.value;
     
-            // ✅ อัปเดต URL เฉพาะเมื่อมีค่าตำบล
+            // อัปเดต URL เฉพาะเมื่อมีค่าตำบล
             if (tambon) {
                 const newUrl = `${window.location.pathname}?tambon=${encodeURIComponent(tambon)}`;
                 window.history.replaceState({}, document.title, newUrl);
             } else {
-            // ✅ ถ้าล้างตำบล → ลบพารามิเตอร์ออกจาก URL
+            // ถ้าล้างตำบล จะลบพารามิเตอร์ออกจาก URL
                 const newUrl = window.location.pathname;
                 window.history.replaceState({}, document.title, newUrl);
             }
     
-    // ✅ เรียก updateTambonHeader() โดยส่งพารามิเตอร์ว่าให้แสดงทั้งหมดหรือไม่
+    // เรียก updateTambonHeader() โดยส่งพารามิเตอร์ว่าให้แสดงทั้งหมดหรือไม่
     updateTambonHeader(!tambon);
     filterStations();
 });
 
-        // ✅ Initialize on page load
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // ✅ Logout จาก Navigation Menu
+            // Logout จาก Navigation Menu
     const navLogoutBtn = document.getElementById('navLogoutBtn');
     if (navLogoutBtn) {
         navLogoutBtn.addEventListener('click', (e) => {

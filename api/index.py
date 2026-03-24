@@ -56,17 +56,17 @@ def get_stations():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
+    
+# เพิ่มสถานีใหม่ + ข้อมูลน้ำ/ดิน
 @api_bp.route('/stations', methods=['POST'])
 def add_station_api():
     try:
         from app import get_db
-        data = request.get_json()
+        data = request.get_json() # รับ JSON จาก Frontend
         
         if not data:
             return jsonify({'success': False, 'error': 'No JSON data received'}), 400
-        
+        # ดึงและทำความสะอาดข้อมูลพื้นฐาน
         station  = str(data.get('station',  '') or '').strip()
         river    = str(data.get('river',    '') or '').strip()
         tambon   = str(data.get('tambon',   '') or '').strip()
@@ -74,7 +74,7 @@ def add_station_api():
         province = str(data.get('province', '') or '').strip()
         location = str(data.get('location', '') or '').strip()
 
-        # ✅ รับและแปลง lat/lon
+        # รับและแปลง lat/lon
         lat_raw = data.get('lat')
         lon_raw = data.get('lon')
         try:
@@ -116,10 +116,11 @@ def add_station_api():
             unit  = str(item.get('unit', '')      or '').strip()
             if not param:
                 continue
-            for i in range(1, 16):  # ✅ 15 ครั้ง
+            for i in range(1, 16):  #  16 ครั้ง
                 value = str(item.get(f'check{i}', '') or '').strip()
                 if not value:
                     continue
+                # แปลงค่าเป็นตัวเลข 
                 numeric_value = None
                 if value not in ['-', 'ND']:
                     try:
@@ -139,7 +140,7 @@ def add_station_api():
             param = str(item.get('parameter', '') or '').strip()
             if not param:
                 continue
-            for i in range(1, 10):  # ✅ 9 ครั้ง
+            for i in range(1, 10):  # 9 ครั้ง
                 value = str(item.get(f'check{i}', '') or '').strip()
                 if not value:
                     continue
@@ -166,8 +167,8 @@ def add_station_api():
             'station': station,
             'lat': lat,
             'lon': lon,
-            'water_count': water_count,
-            'soil_count': soil_count
+            'water_count': water_count, # จำนวนเรคคอร์ดน้ำที่บันทึก
+            'soil_count': soil_count # จำนวนเรคคอร์ดดินที่บันทึก
         }), 201
 
     except Exception as e:
@@ -264,7 +265,7 @@ def update_station_api(station_code): # แก้ไขข้อมูลพื�
     try:
         from app import get_db
         data = request.get_json() or request.form.to_dict()
-        
+        # ดึงและทำความสะอาดข้อมูล
         station = data.get('station', '').strip()
         river = data.get('river', '').strip()
         tambon = data.get('tambon', '').strip()
@@ -272,7 +273,7 @@ def update_station_api(station_code): # แก้ไขข้อมูลพื�
         province = data.get('province', '').strip()
         location = data.get('location', '').strip()
         
-        # ✅ แก้ — เพิ่ม lat, lon
+        # แปลง lat, lon
         lat_raw = data.get('lat')
         lon_raw = data.get('lon')
         try:

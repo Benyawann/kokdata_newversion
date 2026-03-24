@@ -124,12 +124,13 @@ function createRow(type, checkCount, data = null) {
 
     // สิ่งที่ตรวจ / สารที่ตรวจ
     const paramCell = document.createElement('td');
+    // คอลัมน์พารามิเตอร์ (ชื่อสิ่งที่ตรวจ)
     const paramInput = document.createElement('input');
     paramInput.type = 'text';
-    paramInput.name = isSoil ? 'soil_parameter[]' : 'parameter[]';
+    paramInput.name = isSoil ? 'soil_parameter[]' : 'parameter[]'; // [] เพื่อส่งเป็น Array
     paramInput.placeholder = isSoil ? 'เช่น ตะกั่ว, แคดเมียม' : 'เช่น ความขุ่น, DO';
     paramInput.required = true;
-    if (data && data.parameter) paramInput.value = data.parameter;
+    if (data && data.parameter) paramInput.value = data.parameter;// เติมค่าเดิม
     paramCell.appendChild(paramInput);
     row.appendChild(paramCell);
 
@@ -196,6 +197,7 @@ function updateTableHeader(tableId, checkCount, firstColumnText, hasUnit = true)
 // === เพิ่มคอลัมน์ใหม่ ===
 function addColumn(type) {
     const isSoil = (type === 'soil');
+    // เพิ่มจำนวนคอลัมน์ในตัวแปร
     const checkCount = isSoil ? ++soilCheckColumns : ++waterCheckColumns;
     
     // อัปเดตหัวตาราง
@@ -352,7 +354,7 @@ document.getElementById('stationForm').addEventListener('submit', async (e) => {
             // แสดงข้อความสั้นๆ แล้วรีไดเรกต์ไปหน้าแผนที่ทันที
             submitBtn.textContent = '✅ บันทึกสำเร็จ!';
             
-            // ✅ รีไดเรกต์ไปหน้าหลัก (แผนที่) เพื่ออัปเดตข้อมูลสรุปจำนวนสถานี
+            // รีไดเรกต์ไปหน้าหลัก (แผนที่) เพื่ออัปเดตข้อมูลสรุปจำนวนสถานี
             setTimeout(() => {
                 window.location.href = '/station/{{ station.station }}';  // ✅ ไปหน้า Map & News
             }, 1500);
