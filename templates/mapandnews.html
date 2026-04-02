@@ -900,7 +900,6 @@
             const pageItems = filteredNews.slice(startIndex, startIndex + NEWS_ITEMS_PER_PAGE);
             grid.innerHTML = pageItems.map(news => `
                 <div class="news-card ${news.type}" onclick="openNewsLink('${news.externalLink}')" style="cursor:pointer;">
-                    <div class="news-image">${news.image ? `<img src="${news.image}" alt="news">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;color:white;">📰</div>'}</div>
                     <div class="news-content">
                         <div class="news-title">${highlightText(news.title, newsSearchQuery)}</div>
                         <div class="news-excerpt">${highlightText(news.excerpt, newsSearchQuery)}</div>
@@ -909,17 +908,64 @@
                 </div>`).join('');
             renderNewsPagination(totalPages);
         }
+
         // แสดงข่าวพร้อม PAgination
         function renderNewsPagination(totalPages) {
-            const pagination = document.getElementById('news-pagination');
-            if (!pagination) return;
-            pagination.innerHTML = '';
-            if (totalPages <= 1) return;
-            pagination.innerHTML = `
-                <button onclick="changeNewsPage(${newsCurrentPage - 1})" ${newsCurrentPage === 1 ? 'disabled' : ''}><</button>
-                ${Array.from({length: totalPages}, (_, i) => `<button onclick="changeNewsPage(${i + 1})" class="${i + 1 === newsCurrentPage ? 'active' : ''}">${i + 1}</button>`).join('')}
-                <button onclick="changeNewsPage(${newsCurrentPage + 1})" ${newsCurrentPage === totalPages ? 'disabled' : ''}>></button>`;
+    const pagination = document.getElementById('news-pagination');
+    if (!pagination) return;
+    pagination.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const current = newsCurrentPage;
+    const delta = 1; // จำนวนหน้าที่แสดงรอบหน้าปัจจุบัน
+    const pages = [];
+
+    // สร้างรายการหน้าที่จะแสดง
+    const rangeStart = Math.max(2, current - delta);
+    const rangeEnd = Math.min(totalPages - 1, current + delta);
+
+    pages.push(1); // หน้าแรกเสมอ
+
+    if (rangeStart > 2) pages.push('...'); // ellipsis ซ้าย
+
+    for (let i = rangeStart; i <= rangeEnd; i++) {
+        pages.push(i);
+    }
+
+    if (rangeEnd < totalPages - 1) pages.push('...'); // ellipsis ขวา
+
+    if (totalPages > 1) pages.push(totalPages); // หน้าสุดท้ายเสมอ
+
+    // ปุ่มย้อนกลับ
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '<';
+    prevBtn.disabled = current === 1;
+    prevBtn.onclick = () => changeNewsPage(current - 1);
+    pagination.appendChild(prevBtn);
+
+    // ปุ่มหน้าต่างๆ
+    pages.forEach(p => {
+        if (p === '...') {
+            const span = document.createElement('span');
+            span.textContent = '...';
+            span.style.cssText = 'padding: 0 4px; color: var(--color-text-secondary); line-height: 1; align-self: flex-end;';
+            pagination.appendChild(span);
+        } else {
+            const btn = document.createElement('button');
+            btn.textContent = p;
+            if (p === current) btn.classList.add('active');
+            btn.onclick = () => changeNewsPage(p);
+            pagination.appendChild(btn);
         }
+    });
+
+    // ปุ่มถัดไป
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '>';
+    nextBtn.disabled = current === totalPages;
+    nextBtn.onclick = () => changeNewsPage(current + 1);
+    pagination.appendChild(nextBtn);
+}
 
         function changeNewsPage(page) {
             const filtered = filterNewsBySearch(newsData, newsSearchQuery);
