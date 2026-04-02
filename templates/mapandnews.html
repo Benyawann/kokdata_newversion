@@ -652,7 +652,7 @@
             select.innerHTML = '<option value="latest">ล่าสุด</option>';
             checks.forEach(check => {
                 const num = parseInt(check.replace(/[^0-9]/g, '')) || 0;
-                if (currentTab === 'water' && num === 16) return;
+                if (currentTab === 'water' && num === 17) return;
                 if (currentTab === 'sediment' && num === 9) return;
                 let label = check.includes('ครั้งที่') ? check : `ครั้งที่ ${check}`;
                 select.innerHTML += `<option value="${check}">${label}</option>`;
