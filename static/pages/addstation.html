@@ -135,7 +135,7 @@
     }
 }
     const WATER_CHECK_COUNT = 17;  // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจน้ำ
-    const SOIL_CHECK_COUNT = 9; // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจตะกอนดิน
+    const SOIL_CHECK_COUNT = 10; // ค่าเริ่มต้นสำหรับจำนวนครั้งที่ตรวจตะกอนดิน
 
     // ฟังก์ชันสร้างแถว
     function createRow(type, checkCount, isFirstRow = false) {
@@ -329,7 +329,7 @@
             soilTbody.appendChild(createRow('soil', SOIL_CHECK_COUNT, false));
         });
 
-        // จัดการ Submit Form - บันทึกแล้วไปหน้าแผนที่เพื่ออัปเดตสรุป
+    // จัดการ Submit Form - บันทึกแล้วไปหน้าแผนที่เพื่ออัปเดตสรุป
     document.getElementById('stationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
