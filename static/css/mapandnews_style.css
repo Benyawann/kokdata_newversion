@@ -2252,3 +2252,145 @@ body {
         align-self: stretch;
     }
 }
+
+/* ========== Footer Styles ========== */
+
+/* ===== Page Wrapper for Natural Sticky Footer ===== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.page-wrapper {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 60px); /* ลบความสูงของ nav ออก */
+}
+
+.main-content {
+    flex: 1 0 auto;
+    margin-top: 60px; /* เท่ากับความสูงของ nav */
+    padding-bottom: 20px;
+}
+
+./* ========== Footer Styles - Match Nav Menu ========== */
+.site-footer {
+    background: #ABD69A;              /* ✅ สีเดียวกับ nav-menu */
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.2); /* ✅ เงาด้านบนแทนด้านล่าง */
+    color: black;
+    padding: 15px 0;
+    width: 100%;
+    font-family: "Noto Sans Thai", sans-serif;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.footer-container {
+    max-width: 1400px;                /* ✅ เท่ากับ nav-container */
+    margin: 0 auto;
+    padding: 0 40px;                  /* ✅ padding เดียวกับ nav */
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    color: black;
+}
+
+.footer-info {
+    text-align: right;
+}
+
+.footer-name {
+    font-weight: 500;
+    margin-bottom: 3px;
+    font-size: 0.9em;
+    color: black;
+}
+
+.footer-contact {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85em;
+    color: black;
+}
+
+.footer-contact a {
+    color: black;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.footer-contact a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+.footer-copyright {
+    padding-top: 10px;
+    text-align: center;
+    font-size: 0.8em;
+    color: rgba(0,0,0,0.7);
+}
+
+/* Responsive Footer - Match Nav */
+@media (max-width: 768px) {
+    .footer-container {
+        padding: 0 20px;              /* ✅ เท่ากับ nav บนมือถือ */
+    }
+    
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+        padding-bottom: 8px;
+    }
+    
+    .footer-info {
+        text-align: center;
+    }
+    
+    .footer-contact {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .footer-logo {
+        justify-content: center;
+        font-size: 0.95em;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-contact {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .footer-name {
+        font-size: 0.85em;
+    }
+    
+    .footer-copyright {
+        font-size: 0.75em;
+    }
+}
