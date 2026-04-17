@@ -764,20 +764,6 @@ body {
     }
 }
 
-/* ========== Base Layout Fix ========== */
-html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    background: linear-gradient(135deg, #B8D4A5 0%, #CFAF9F 100%);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-}
 
 /* ========== Main Grid ========== */
 .main-grid {
