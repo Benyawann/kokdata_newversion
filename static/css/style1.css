@@ -9,14 +9,23 @@
 body {
     background: linear-gradient(135deg, #B8D4A5 0%, #CFAF9F 100%);
     min-height: 100vh;
-    padding: 20px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
 }
 
+/* ให้ .container ขยายเต็มพื้นที่ดัน footer ลงล่าง */
 .container {
+    flex: 1 0 auto;
     max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 20px;
+    box-sizing: border-box;
 }
+
 
 .back-button {
     display: inline-block;
@@ -629,4 +638,335 @@ body {
 @media (max-width: 1024px) {
     .main-grid { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
+}
+
+
+.main-content {
+    flex: 1 0 auto;
+    margin-top: 60px;
+    padding: 20px;
+}
+
+/* ========== Footer ========== */
+.site-footer {
+    flex-shrink: 0;
+    background: #ABD69A;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+    color: black;
+    padding: 15px 0;
+    width: 100%;
+    font-family: "Noto Sans Thai", sans-serif;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.footer-info {
+    text-align: right;
+}
+
+.footer-name {
+    font-weight: 500;
+    margin-bottom: 3px;
+    font-size: 0.9em;
+}
+
+.footer-contact {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85em;
+    flex-wrap: wrap;
+}
+
+.footer-contact a {
+    color: black;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.footer-contact a:hover {
+    opacity: 0.7;
+    text-decoration: underline;
+}
+
+.footer-copyright {
+    padding-top: 10px;
+    text-align: center;
+    font-size: 0.8em;
+    color: rgba(0,0,0,0.65);
+}
+
+/* Responsive Footer */
+@media (max-width: 768px) {
+    .footer-container {
+        padding: 0 20px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .footer-info {
+        text-align: center;
+    }
+
+    .footer-contact {
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .footer-logo {
+        justify-content: center;
+        font-size: 0.95em;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-contact {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .footer-name {
+        font-size: 0.85em;
+    }
+
+    .footer-copyright {
+        font-size: 0.72em;
+    }
+}
+
+/* ========== Base Layout Fix ========== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: linear-gradient(135deg, #B8D4A5 0%, #CFAF9F 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* ========== Main Grid ========== */
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 35px;
+}
+
+/* ========== Responsive ========== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .header-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .station-actions {
+        width: 100%;
+    }
+
+    .edit-button, .delete-button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .station-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 18px 20px;
+        gap: 10px;
+    }
+
+    .station-header h1 {
+        font-size: 1.2em;
+    }
+
+    .station-code {
+        font-size: 1em;
+        padding: 6px 14px;
+    }
+
+    .data-source-box {
+        font-size: 0.85em;
+        padding: 12px 15px;
+    }
+
+    .main-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .info-item {
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+
+    #station-map {
+        height: 250px;
+    }
+
+    .data-section {
+        padding: 16px;
+    }
+
+    .data-section h2 {
+        font-size: 1.1em;
+        flex-wrap: wrap;
+    }
+
+    .tab-nav {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .tab-btn {
+        flex: 1;
+        text-align: center;
+        padding: 10px 8px;
+        font-size: 0.9em;
+    }
+
+    /* ตาราง scroll แนวนอน */
+    .data-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table {
+        font-size: 0.82em;
+        min-width: 500px; /* บังคับให้ scroll แทน wrapping */
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    .data-table td:first-child,
+    .data-table th:first-child {
+        min-width: 140px;
+    }
+
+    .parameter-selector {
+        flex-direction: column;
+    }
+
+    .parameter-selector select {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .chart-toggle {
+        width: 100%;
+    }
+
+    .chart-wrapper {
+        height: 260px;
+    }
+
+    .period-note {
+        font-size: 0.85em;
+        padding: 15px;
+    }
+
+    .modal-container {
+        padding: 20px;
+        margin: 10px;
+        width: 95%;
+    }
+
+    .modal-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .btn-modal {
+        width: 100%;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+    .station-header h1 {
+        font-size: 1em;
+    }
+
+    .edit-button, .delete-button {
+        font-size: 0.85em;
+        padding: 9px 12px;
+    }
+
+    .data-table {
+        font-size: 0.78em;
+    }
+
+    .chart-wrapper {
+        height: 220px;
+    }
+
+    #station-map {
+        height: 220px;
+    }
+
+    .info-value {
+        font-size: 0.95em;
+    }
+
+    .location-box {
+        font-size: 0.88em;
+        padding: 14px;
+    }
 }
