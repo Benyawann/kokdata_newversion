@@ -13,10 +13,15 @@ html, body {
     overflow-x: hidden;
 }
 
+
 body {
     background: linear-gradient(135deg, #B8D4A5 0%, #CFAF9F 100%);
     min-height: 100vh;
-    padding: 20px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
 }
 
 /* ========== Navigation Menu Styles ========== */
@@ -786,5 +791,128 @@ body {
     
     .stat-card:hover {
         transform: none; /* ✅ ลบเอฟเฟกต์บนหน้าจอสัมผัส */
+    }
+}
+
+.main-content {
+    flex: 1 0 auto;
+    margin-top: 60px;
+    padding: 20px;
+}
+
+/* ========== Footer ========== */
+.site-footer {
+    flex-shrink: 0;
+    background: #ABD69A;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+    color: black;
+    padding: 15px 0;
+    width: 100%;
+    font-family: "Noto Sans Thai", sans-serif;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.footer-info {
+    text-align: right;
+}
+
+.footer-name {
+    font-weight: 500;
+    margin-bottom: 3px;
+    font-size: 0.9em;
+}
+
+.footer-contact {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85em;
+    flex-wrap: wrap;
+}
+
+.footer-contact a {
+    color: black;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.footer-contact a:hover {
+    opacity: 0.7;
+    text-decoration: underline;
+}
+
+.footer-copyright {
+    padding-top: 10px;
+    text-align: center;
+    font-size: 0.8em;
+    color: rgba(0,0,0,0.65);
+}
+
+/* Responsive Footer */
+@media (max-width: 768px) {
+    .footer-container {
+        padding: 0 20px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .footer-info {
+        text-align: center;
+    }
+
+    .footer-contact {
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .footer-logo {
+        justify-content: center;
+        font-size: 0.95em;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-contact {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .footer-name {
+        font-size: 0.85em;
+    }
+
+    .footer-copyright {
+        font-size: 0.72em;
     }
 }
